@@ -1,5 +1,5 @@
 //
-// COMP 371 Assignment Framework
+// COMP 371 Labs Framework
 //
 // Created by Nicolas Bergeron on 20/06/2019.
 //
@@ -17,12 +17,11 @@
                         // initializing OpenGL and binding inputs
 
 #include <glm/glm.hpp>  // GLM is an optimized math library with syntax to similar to OpenGL Shading Language
+#include <glm/gtc/matrix_transform.hpp> // include this to create transformation matrices
 
 const char* getVertexShaderSource()
 {
-    // Insert Shaders here ...
     // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
-
     return
                 "#version 330 core\n"
                 "layout (location = 0) in vec3 aPos;"
@@ -48,13 +47,39 @@ const char* getFragmentShaderSource()
                 "}";
 }
 
+glm::vec3 triangleArray[] = {
+    glm::vec3( 0.0f,  0.5f, 0.03f),  // top center position
+    glm::vec3( 1.0f,  0.0f, 0.0f),  // top center color (red)
+    glm::vec3( 0.5f, -0.5f, 0.03f),  // bottom right
+    glm::vec3( 0.0f,  1.0f, 0.0f),  // bottom right color (green)
+    glm::vec3(-0.5f, -0.5f, 0.03f),  // bottom left
+    glm::vec3( 0.0f,  0.0f, 1.0f),  // bottom left color (blue)
+};
+
+glm::vec3 squareArray[] = {
+    // First Triangle
+    glm::vec3(-0.5f, -0.5f, 0.0f),
+    glm::vec3( 1.0f,  0.0f, 0.0f),
+    glm::vec3( 0.5f,  0.5f, 0.0f),
+    glm::vec3( 0.0f,  1.0f, 0.0f),
+    glm::vec3(-0.5f,  0.5f, 0.0f),
+    glm::vec3( 0.0f,  0.0f, 1.0f),
+
+    // Second Triangle
+    glm::vec3( 0.5f, -0.5f, 0.0f),
+    glm::vec3( 1.0f,  1.0f, 0.0f),
+    glm::vec3( 0.5f,  0.5f, 0.0f),
+    glm::vec3( 0.0f,  1.0f, 0.0f),
+    glm::vec3(-0.5f, -0.5f, 0.0f),
+    glm::vec3( 1.0f,  0.0f, 0.0f),
+};
+
 
 int compileAndLinkShaders()
 {
     // compile and link shader program
     // return shader program id
     // ------------------------------------
-
 
     // vertex shader
     int vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -105,39 +130,18 @@ int compileAndLinkShaders()
     return shaderProgram;
 }
 
-int createVertexBufferObject()
+int createVertexArrayObject(const glm::vec3* vertexArray, int arraySize)
 {
-    // TODO
-    // Upload geometry to GPU and return the Vertex Buffer Object ID
-    
-    return -1;
-}
-
-int createVertexArrayObject()
-{
-    float offsety = 0.3f;
-    float offsetx = 0.3f;
-    // A vertex is a point on a polygon, it contains positions and other data (eg: colors)
-    glm::vec3 vertexArray[] = {
-        glm::vec3( 0.0f+offsetx,  -0.5f+offsety, 0.0f),  // bottom center position
-        glm::vec3( 1.0f,  1.0f, 1.0f),  // bottom center color (white)
-        glm::vec3( 0.5f+offsetx, 0.5f+offsety, 0.0f),  // top right
-        glm::vec3( 1.0f,  1.0f, 1.0f),  // top right color (white)
-        glm::vec3(-0.5f+offsetx, 0.5f+offsety, 0.0f),  // top left
-        glm::vec3( 1.0f,  1.0f, 1.0f),  // top left color (white)
-    };
-    
     // Create a vertex array
     GLuint vertexArrayObject;
     glGenVertexArrays(1, &vertexArrayObject);
     glBindVertexArray(vertexArrayObject);
-    
-    
+
     // Upload Vertex Buffer to the GPU, keep a reference to it (vertexBufferObject)
     GLuint vertexBufferObject;
     glGenBuffers(1, &vertexBufferObject);
     glBindBuffer(GL_ARRAY_BUFFER, vertexBufferObject);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexArray), vertexArray, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, arraySize, vertexArray, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0,                   // attribute 0 matches aPos in Vertex Shader
                           3,                   // size
@@ -158,30 +162,26 @@ int createVertexArrayObject()
                           );
     glEnableVertexAttribArray(1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0); // VAO already stored the state we just defined, safe to unbind buffer
-    glBindVertexArray(0); // Unbind to not modify the VAO
-    
-    return vertexArrayObject;
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindVertexArray(0);
+
+  return vertexArrayObject;
 }
+
 
 int main(int argc, char*argv[])
 {
     // Initialize GLFW and OpenGL version
     glfwInit();
-
-#if defined(PLATFORM_OSX)	
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2); 
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#else
-	// On windows, we set OpenGL version to 2.1, to support more hardware
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-#endif
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
     // Create Window and rendering context using GLFW, resolution is 800x600
-    GLFWwindow* window = glfwCreateWindow(600, 600, "Comp371 - Lab 01", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Comp371 - Lab 02", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -189,14 +189,7 @@ int main(int argc, char*argv[])
         return -1;
     }
     glfwMakeContextCurrent(window);
-
-    // glViewport(0, 0, 600, 600); // use a screen size of WIDTH x HEIGHT
-
-    // glMatrixMode(GL_PROJECTION);     // Make a simple 2D projection on the entire window
-    // glLoadIdentity();
-    // glOrtho(0.0, 600, 600, 0.0, 0.0, 100.0);
-
-    // glMatrixMode(GL_MODELVIEW);    // Set the matrix mode to objectmodeling
+    
 
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -206,37 +199,39 @@ int main(int argc, char*argv[])
         return -1;
     }
 
-    // Burgandy background
-    glClearColor(0.3882352941176471f, 0.08235294117647059f, 0.1372549019607843f, 1.0f);
-    
+    // Black background
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders();
     
     // Define and upload geometry to the GPU here ...
-    int vbo = createVertexBufferObject();
-
-    int vao = createVertexArrayObject();
+    int triangleAO = createVertexArrayObject(triangleArray, sizeof(triangleArray));
+    int squareAO = createVertexArrayObject(squareArray, sizeof(squareArray));
     
+    // Variables to be used later in tutorial
+    float angle = 0;
+    float rotationSpeed = 180.0f;  // 180 degrees per second
+    float lastFrameTime = glfwGetTime();
+
     // Entering Main Loop
     while(!glfwWindowShouldClose(window))
     {
         // Each frame, reset color of each pixel to glClearColor
         glClear(GL_COLOR_BUFFER_BIT);
         
-        
-        // TODO - draw white triangle
+        // Draw geometry
         glUseProgram(shaderProgram);
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        glBindVertexArray(0);
-
-        // End frame
-        glfwSwapBuffers(window);
         
-        // Detect inputs
+        //Draw Rectangle
+        glBindVertexArray(squareAO);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
+
+        glfwSwapBuffers(window);
         glfwPollEvents();
         
+        // Handle inputs
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
     }
@@ -244,5 +239,5 @@ int main(int argc, char*argv[])
     // Shutdown GLFW
     glfwTerminate();
     
-	return 0;
+    return 0;
 }
