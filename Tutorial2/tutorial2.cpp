@@ -80,6 +80,11 @@ glm::vec3 squareArray[] = {
     glm::vec3( 1.0f,  0.0f, 0.0f),
 };
 
+// Camera Vectors
+glm::vec3 cameraPos   = glm::vec3(-0.5f, 0.0f, 0.0f);
+glm::vec3 cameraFront = glm::vec3(-0.5f, 0.0f, -1.0f);
+glm::vec3 cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
+
 
 int compileAndLinkShaders()
 {
@@ -174,6 +179,18 @@ int createVertexArrayObject(const glm::vec3* vertexArray, int arraySize)
   return vertexArrayObject;
 }
 
+void processInput(GLFWwindow *window, float deltaTime){
+    float cameraSpeed = 2.5f * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+}
+
 
 int main(int argc, char*argv[])
 {
@@ -205,6 +222,10 @@ int main(int argc, char*argv[])
         return -1;
     }
 
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    glViewport(0, 0, width, height);
+
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     
@@ -221,6 +242,10 @@ int main(int argc, char*argv[])
     float lastFrameTime = glfwGetTime();
 
     glEnable(GL_CULL_FACE);
+
+    glm::mat4 viewMatrix = glm::mat4(1.0f);
+
+    int lastKeyPress = GLFW_KEY_1;
 
     // Entering Main Loop
     while(!glfwWindowShouldClose(window))
@@ -263,22 +288,19 @@ int main(int argc, char*argv[])
 
         if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
         {
-            glm::mat4 viewMatrix = glm::mat4(1.0f);
-            GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
-            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+            lastKeyPress = GLFW_KEY_1;
+            viewMatrix = glm::mat4(1.0f);
         }
         if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
         {
-            glm::mat4 viewMatrix = glm::lookAt(
-                glm::vec3(-0.5f, 0.0f, 0.0f),   //eye
-                glm::vec3(-0.5f, 0.0f, -1.0f),  //center
-                glm::vec3(0.0f, 1.0f, 0.0f)     //up
-            );
-            GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
-            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+            lastKeyPress = GLFW_KEY_2;
+            cameraPos   = glm::vec3(-0.5f, 0.0f, 0.0f);
+            cameraFront = glm::vec3(-0.5f, 0.0f, -1.0f);
+            cameraUp    = glm::vec3(0.0f, 1.0f, 0.0f);
         }
         if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
         {
+            lastKeyPress = GLFW_KEY_3;
             glm::mat4 projectionMatrix = glm::perspective(
                 glm::radians(90.0f),            // FOV in degrees
                 800.0f/600.0f,                  // window aspect ratio
@@ -289,6 +311,7 @@ int main(int argc, char*argv[])
         }
         if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
         {
+            lastKeyPress = GLFW_KEY_4;
             glm::mat4 projectionMatrix = glm::ortho(
                 -4.0f, 4.0f,                        // left/right
                 -3.0f, 3.0f,                        // window aspect ratio
@@ -297,6 +320,10 @@ int main(int argc, char*argv[])
             GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
             glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
         }
+        processInput(window, dt);
+        glm::mat4 viewMatrix = lastKeyPress==GLFW_KEY_1? glm::mat4(1.0f) : glm::lookAt(cameraPos, cameraFront+cameraPos, cameraUp);
+        GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
+        glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
     }
     
     // Shutdown GLFW
