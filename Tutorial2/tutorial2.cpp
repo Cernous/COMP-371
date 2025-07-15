@@ -26,11 +26,17 @@ const char* getVertexShaderSource()
                 "#version 330 core\n"
                 "layout (location = 0) in vec3 aPos;"
                 "layout (location = 1) in vec3 aColor;"
+                ""
+                "uniform mat4 worldMatrix;"
+                "uniform mat4 viewMatrix = mat4(1.0f);"
+                "uniform mat4 projectionMatrix = mat4(1.0f);"
+                ""
                 "out vec3 vertexColor;"
                 "void main()"
                 "{"
                 "   vertexColor = aColor;"
-                "   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
+                "   gl_Position =  modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
                 "}";
 }
 
@@ -214,6 +220,8 @@ int main(int argc, char*argv[])
     float rotationSpeed = 180.0f;  // 180 degrees per second
     float lastFrameTime = glfwGetTime();
 
+    glEnable(GL_CULL_FACE);
+
     // Entering Main Loop
     while(!glfwWindowShouldClose(window))
     {
@@ -226,7 +234,25 @@ int main(int argc, char*argv[])
         //Draw Rectangle
         glBindVertexArray(squareAO);
 
+        float dt = glfwGetTime() - lastFrameTime;
+        lastFrameTime += dt;
+
+        angle = (angle + rotationSpeed * dt);
+        glm::mat4 rotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(angle), glm::vec3(0.0f, 1.0f, 0.0f));
+
+        GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &rotationMatrix[0][0]);
+
         glDrawArrays(GL_TRIANGLES, 0, 6); // 6 vertices, starting at index 0
+
+        //Draw Triangle
+        glBindVertexArray(triangleAO);
+        glm::mat4 scalingMatrix = glm::scale(glm::mat4(1.0f), glm::vec3(0.25f, -0.25f, 0.25f));
+        glm::mat4 translationMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, 0.25f, -0.5f));
+        glm::mat4 worldMatrix = translationMatrix * scalingMatrix;
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
+
+        glDrawArrays(GL_TRIANGLES, 0, 3); // 3 vertices, starting at index 0
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -234,6 +260,43 @@ int main(int argc, char*argv[])
         // Handle inputs
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
+
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
+        {
+            glm::mat4 viewMatrix = glm::mat4(1.0f);
+            GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
+            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+        }
+        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
+        {
+            glm::mat4 viewMatrix = glm::lookAt(
+                glm::vec3(-0.5f, 0.0f, 0.0f),   //eye
+                glm::vec3(-0.5f, 0.0f, -1.0f),  //center
+                glm::vec3(0.0f, 1.0f, 0.0f)     //up
+            );
+            GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
+            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+        }
+        if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
+        {
+            glm::mat4 projectionMatrix = glm::perspective(
+                glm::radians(90.0f),            // FOV in degrees
+                800.0f/600.0f,                  // window aspect ratio
+                0.01f, 100.0f                   // near and far
+            );
+            GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
+            glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+        }
+        if (glfwGetKey(window, GLFW_KEY_4) == GLFW_PRESS)
+        {
+            glm::mat4 projectionMatrix = glm::ortho(
+                -4.0f, 4.0f,                        // left/right
+                -3.0f, 3.0f,                        // window aspect ratio
+                -100.0f, 100.0f                     // near and far
+            );
+            GLuint projectionMatrixLocation = glGetUniformLocation(shaderProgram, "projectionMatrix");
+            glUniformMatrix4fv(projectionMatrixLocation, 1, GL_FALSE, &projectionMatrix[0][0]);
+        }
     }
     
     // Shutdown GLFW
