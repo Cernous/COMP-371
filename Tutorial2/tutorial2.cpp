@@ -181,6 +181,9 @@ int createVertexArrayObject(const glm::vec3* vertexArray, int arraySize)
 
 void processInput(GLFWwindow *window, float deltaTime){
     float cameraSpeed = 2.5f * deltaTime;
+    if ((glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) || (glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS)){
+        cameraSpeed *= 3;
+    }
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         cameraPos += cameraSpeed * cameraFront;
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
