@@ -225,6 +225,7 @@ int main(int argc, char*argv[])
         return -1;
     }
 
+    // Very important for different scaling and screen size ratio
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
