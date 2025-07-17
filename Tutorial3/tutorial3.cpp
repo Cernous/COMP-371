@@ -390,9 +390,9 @@ int main(int argc, char*argv[])
         {
             // In third person view, let's draw the spinning cube in world space, like any other models
             mat4 spinningCubeWorldMatrix(1.0f);
-            mat4 spinningCubeViewMatrix = translate(mat4(1.0f), cameraPosition) *
+            mat4 spinningCubeViewMatrix = translate(mat4(1.0f), vec3(0.0f, 0.0f, -1.0f)) *
                                            rotate(mat4(1.0f), radians(spinningCubeAngle), vec3(0.0f, 1.0f, 0.0f)) *
-                                           scale(mat4(1.0f), vec3(0.1f, 0.1f, 0.1f));
+                                           scale(mat4(1.0f), vec3(0.01f, 0.01f, 0.01f));
             
             glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &spinningCubeWorldMatrix[0][0]);
             glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &spinningCubeViewMatrix[0][0]);
