@@ -254,6 +254,7 @@ int main(int argc, char*argv[])
 
     // @TODO 3 - Disable mouse cursor
     // ...
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -262,6 +263,11 @@ int main(int argc, char*argv[])
         glfwTerminate();
         return -1;
     }
+
+    // Very important for different scaling and screen size ratio
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    glViewport(0, 0, width, height);
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -321,6 +327,7 @@ int main(int argc, char*argv[])
     
     // @TODO 1 - Enable Depth Test
     // ...
+    glEnable(GL_DEPTH_TEST);
     
     
     // Container for projectiles to be implemented in tutorial
@@ -337,8 +344,7 @@ int main(int argc, char*argv[])
         // Each frame, reset color of each pixel to glClearColor
 
         // @TODO 1 - Clear Depth Buffer Bit as well
-        // ...
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         
         // Draw geometry
@@ -371,20 +377,32 @@ int main(int argc, char*argv[])
         }
         
         // @TODO 2 - Update and draw projectiles
-        // ...
-
+        for(list<Projectile>::iterator it = projectileList.begin(); it != projectileList.end(); it++){
+            it->Update(dt);
+            it->Draw();
+        }
         
         // Spinning cube at camera position
         spinningCubeAngle += 180.0f * dt;
         
         // @TODO 7 - Draw in view space for first person camera
-        
+        if(cameraFirstPerson)
         {
             // In third person view, let's draw the spinning cube in world space, like any other models
-            mat4 spinningCubeWorldMatrix = translate(mat4(1.0f), cameraPosition) *
+            mat4 spinningCubeWorldMatrix(1.0f);
+            mat4 spinningCubeViewMatrix = translate(mat4(1.0f), cameraPosition) *
                                            rotate(mat4(1.0f), radians(spinningCubeAngle), vec3(0.0f, 1.0f, 0.0f)) *
                                            scale(mat4(1.0f), vec3(0.1f, 0.1f, 0.1f));
             
+            glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &spinningCubeWorldMatrix[0][0]);
+            glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &spinningCubeViewMatrix[0][0]);
+        }
+        else 
+        {
+            mat4 spinningCubeWorldMatrix = translate(mat4(1.0f), cameraPosition) *
+                                           rotate(mat4(1.0f), radians(spinningCubeAngle), vec3(0.0f, 1.0f, 0.0f)) *
+                                           scale(mat4(1.0f), vec3(0.1f, 0.1f, 0.1f));
+
             glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &spinningCubeWorldMatrix[0][0]);
         }
         glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -419,34 +437,68 @@ int main(int argc, char*argv[])
         // @TODO 4 - Calculate mouse motion dx and dy
         //         - Update camera horizontal and vertical angle
         //...
+        double mousePosX, mousePosY;
+        glfwGetCursorPos(window, &mousePosX, &mousePosY);
+
+        double dx = mousePosX - lastMousePosX;
+        double dy = mousePosY - lastMousePosY;
+
+        lastMousePosX = mousePosX;
+        lastMousePosY = mousePosY;
+
+        const float cameraAngularSpeed = 6.0f;
+        cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
+        cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
+
+        cameraVerticalAngle = std::max(-85.0f, std::min(85.0f, cameraVerticalAngle));
+        if(cameraHorizontalAngle > 360)
+            cameraHorizontalAngle -= 360;
+        else if (cameraHorizontalAngle < - 360)
+            cameraHorizontalAngle += 360;
+
+        float theta = radians(cameraHorizontalAngle);
+        float phi = radians(cameraVerticalAngle);
+
+        cameraLookAt = vec3(cosf(phi)*cosf(theta), sinf(phi), -cosf(phi)*sinf(theta));
+        vec3 cameraSideVector = glm::cross(cameraLookAt, vec3(0.0f, 1.0f, 0.0f));
+
+        glm::normalize(cameraSideVector);
         
         // @TODO 5 = use camera lookat and side vectors to update positions with ASDW
         // adjust code below
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) // move camera to the left
         {
-            cameraPosition.x -= currentCameraSpeed * dt;
+            cameraPosition.x -= currentCameraSpeed * dt * currentCameraSpeed;
         }
         
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) // move camera to the right
         {
-            cameraPosition.x += currentCameraSpeed * dt;
+            cameraPosition.x += currentCameraSpeed * dt * currentCameraSpeed;
         }
         
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) // move camera up
         {
-            cameraPosition.y -= currentCameraSpeed * dt;
+            cameraPosition.y -= currentCameraSpeed * dt * currentCameraSpeed;
         }
         
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // move camera down
         {
-            cameraPosition.y += currentCameraSpeed * dt;
+            cameraPosition.y += currentCameraSpeed * dt * currentCameraSpeed;
         }
       
         // TODO 6
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
-        mat4 viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp );
+        mat4 viewMatrix = mat4(1.0);
+        
+        if(cameraFirstPerson){
+            viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp );
+        } else {
+            float radius = 5.0f;
+            glm::vec3 position = cameraPosition - radius * cameraLookAt;
+            viewMatrix = lookAt(position, position + cameraLookAt, cameraUp);
+        }
 
         GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
         glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
@@ -457,7 +509,12 @@ int main(int argc, char*argv[])
         // shoot projectiles on mouse left click
         // To detect onPress events, we need to check the last state and the current state to detect the state change
         // Otherwise, you would shoot many projectiles on each mouse press
-        // ...
+        if (lastMouseLeftState == GLFW_RELEASE && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
+            const float projectileSpeed = 25.0f;
+            projectileList.push_back(Projectile(cameraPosition, projectileSpeed * cameraLookAt, shaderProgram));
+        }
+
+        lastMouseLeftState = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
 
 
     }
