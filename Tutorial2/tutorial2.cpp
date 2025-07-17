@@ -245,7 +245,7 @@ int main(int argc, char*argv[])
     float rotationSpeed = 180.0f;  // 180 degrees per second
     float lastFrameTime = glfwGetTime();
 
-    glEnable(GL_CULL_FACE);
+    // glEnable(GL_CULL_FACE);
 
     glm::mat4 viewMatrix = glm::mat4(1.0f);
 
