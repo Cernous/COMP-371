@@ -430,6 +430,11 @@ int main(int argc, char*argv[])
         {
             cameraPosition += vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
+        // adding anchor for down
+           if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
+        {
+            cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
+        }
       
         // TODO 6
         // Set the view matrix for first and third person cameras
