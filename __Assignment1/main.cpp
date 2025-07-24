@@ -228,6 +228,7 @@ int main(int argc, char*argv[])
     // @TODO 3 - Disable mouse cursor
     // ...
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -237,10 +238,10 @@ int main(int argc, char*argv[])
         return -1;
     }
 
-    // Very important for different scaling and screen size ratio
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    // // Very important for different scaling and screen size ratio
+    // int width, height;
+    glfwGetFramebufferSize(window, &mWidth, &mHeight);
+    glViewport(0, 0, mWidth, mHeight);
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -259,7 +260,7 @@ int main(int argc, char*argv[])
     
     // Other camera parameters
     float cameraSpeed = 1.0f;
-    float cameraFastSpeed = 3.5 * cameraSpeed;
+    float cameraFastSpeed = 15 * cameraSpeed;
     float cameraHorizontalAngle = 90.0f;
     float cameraVerticalAngle = 0.0f;
     bool  cameraFirstPerson = true; // press 1 or 2 to toggle this variable
@@ -416,6 +417,12 @@ int main(int argc, char*argv[])
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS)
         {
             cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
+        }
+
+        // Adding Spacebar for up
+        if (glfwGetKey(window, GLFW_KEY_SPACE ) == GLFW_PRESS)
+        {
+            cameraPosition += vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
       
         // TODO 6
