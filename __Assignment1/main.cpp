@@ -259,7 +259,7 @@ int main(int argc, char*argv[])
     
     // Other camera parameters
     float cameraSpeed = 1.0f;
-    float cameraFastSpeed = 2 * cameraSpeed;
+    float cameraFastSpeed = 3.5 * cameraSpeed;
     float cameraHorizontalAngle = 90.0f;
     float cameraVerticalAngle = 0.0f;
     bool  cameraFirstPerson = true; // press 1 or 2 to toggle this variable
@@ -387,10 +387,6 @@ int main(int argc, char*argv[])
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
         cameraVerticalAngle = std::max(-85.0f, std::min(85.0f, cameraVerticalAngle));
-        if(cameraHorizontalAngle > 360)
-            cameraHorizontalAngle -= 360;
-        else if (cameraHorizontalAngle < - 360)
-            cameraHorizontalAngle += 360;
 
         float theta = radians(cameraHorizontalAngle);
         float phi = radians(cameraVerticalAngle);
@@ -402,24 +398,24 @@ int main(int argc, char*argv[])
         
         // @TODO 5 = use camera lookat and side vectors to update positions with ASDW
         // adjust code below
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) // move camera to the left
+        if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS)
         {
-            cameraPosition.x -= currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition += cameraLookAt * dt * currentCameraSpeed;
         }
         
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) // move camera to the right
+        if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS)
         {
-            cameraPosition.x += currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition -= cameraLookAt * dt * currentCameraSpeed;
         }
         
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) // move camera up
+        if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS)
         {
-            cameraPosition.y -= currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition += cameraSideVector * dt * currentCameraSpeed;
         }
         
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // move camera down
+        if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS)
         {
-            cameraPosition.y += currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
         }
       
         // TODO 6
@@ -432,7 +428,10 @@ int main(int argc, char*argv[])
             viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp );
         } else {
             float radius = 5.0f;
-            glm::vec3 position = cameraPosition - radius * cameraLookAt;
+            glm::vec3 position = cameraPosition - glm::vec3(radius * cosf(phi)*cosf(theta),
+                                                  radius * sinf(phi),
+                                                  -radius * cosf(phi)*sinf(theta));
+;
             viewMatrix = lookAt(position, position + cameraLookAt, cameraUp);
         }
 
