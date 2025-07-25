@@ -116,53 +116,53 @@ int createVertexBufferObject()
 {
     // Cube model
     vec3 vertexArray[] = {  // position,                            color
-        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f), //left - red
-        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f), //left - red
+        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f), // far - blue
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f), // far - blue
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f), // bottom - turquoise
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f), // bottom - turquoise
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), // near - green
-        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f), // near - green
+        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f), // right - purple
-        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f), // right - purple
+        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
+        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f), // top - yellow
-        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f), // top - yellow
+        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
         
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f)
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 1.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 1.0f)
     };
 
     
@@ -228,6 +228,7 @@ int main(int argc, char*argv[])
     // @TODO 3 - Disable mouse cursor
     // ...
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -237,10 +238,10 @@ int main(int argc, char*argv[])
         return -1;
     }
 
-    // Very important for different scaling and screen size ratio
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    glViewport(0, 0, width, height);
+    // // Very important for different scaling and screen size ratio
+    // int width, height;
+    glfwGetFramebufferSize(window, &mWidth, &mHeight);
+    glViewport(0, 0, mWidth, mHeight);
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -259,7 +260,7 @@ int main(int argc, char*argv[])
     
     // Other camera parameters
     float cameraSpeed = 1.0f;
-    float cameraFastSpeed = 2 * cameraSpeed;
+    float cameraFastSpeed = 15 * cameraSpeed;
     float cameraHorizontalAngle = 90.0f;
     float cameraVerticalAngle = 0.0f;
     bool  cameraFirstPerson = true; // press 1 or 2 to toggle this variable
@@ -387,10 +388,6 @@ int main(int argc, char*argv[])
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
         cameraVerticalAngle = std::max(-85.0f, std::min(85.0f, cameraVerticalAngle));
-        if(cameraHorizontalAngle > 360)
-            cameraHorizontalAngle -= 360;
-        else if (cameraHorizontalAngle < - 360)
-            cameraHorizontalAngle += 360;
 
         float theta = radians(cameraHorizontalAngle);
         float phi = radians(cameraVerticalAngle);
@@ -402,24 +399,35 @@ int main(int argc, char*argv[])
         
         // @TODO 5 = use camera lookat and side vectors to update positions with ASDW
         // adjust code below
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) // move camera to the left
+        if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS)
         {
-            cameraPosition.x -= currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition += cameraLookAt * dt * currentCameraSpeed;
         }
         
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) // move camera to the right
+        if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS)
         {
-            cameraPosition.x += currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition -= cameraLookAt * dt * currentCameraSpeed;
         }
         
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) // move camera up
+        if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS)
         {
-            cameraPosition.y -= currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition += cameraSideVector * dt * currentCameraSpeed;
         }
         
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // move camera down
+        if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS)
         {
-            cameraPosition.y += currentCameraSpeed * dt * currentCameraSpeed;
+            cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
+        }
+
+        // Adding Spacebar for up
+        if (glfwGetKey(window, GLFW_KEY_SPACE ) == GLFW_PRESS)
+        {
+            cameraPosition += vec3(0.0f,1.0f,0.0f) * dt * currentCameraSpeed;
+        }
+        // adding anchor for down
+        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
+        {
+            cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
       
         // TODO 6
@@ -432,7 +440,10 @@ int main(int argc, char*argv[])
             viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp );
         } else {
             float radius = 5.0f;
-            glm::vec3 position = cameraPosition - radius * cameraLookAt;
+            glm::vec3 position = cameraPosition - glm::vec3(radius * cosf(phi)*cosf(theta),
+                                                  radius * sinf(phi),
+                                                  -radius * cosf(phi)*sinf(theta));
+;
             viewMatrix = lookAt(position, position + cameraLookAt, cameraUp);
         }
 
