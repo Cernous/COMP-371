@@ -115,13 +115,13 @@ const char* getVertexShaderSource()
             "uniform mat4 projectionMatrix = mat4(1.0);"
             ""
             "out vec3 vertexColor;"
-            "out vec3 fragWorldPos;"  // new
+            "out vec3 fragWorldPos;"  // new position for light
             ""
             "void main()"
             "{"
             "   vertexColor = aColor;"
             "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
-            "   fragWorldPos = worldPos.xyz;"
+            "   fragWorldPos = worldPos.xyz;" // extracts the world position of vertex for lighting
             "   gl_Position = projectionMatrix * viewMatrix * worldPos;"
             "}";
 }
@@ -147,16 +147,17 @@ const char* getFragmentShaderSource()
             "   vec3 baseColor = useOverride ? overrideColor : vertexColor;"
             ""
             "   float totalAmbient = 0.0;"
+            // For each light calculate effect using inverse-square falloff
             "    for (int i = 0; i < numEmitters; ++i) {"
             "       float distance = length(emitterPos[i] - fragWorldPos);"
-            "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
-            "       totalAmbient += intensity;"
+            "       float intensity = ambientStrength[i] / (distance * distance);"  
+            "       totalAmbient += intensity;" //adds up all light contributions from all emiters
             "   }"
             ""
-            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
-            "   vec3 litColor = baseColor * totalAmbient;"
+            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness to prevent over-brightening
+            "   vec3 litColor = baseColor * totalAmbient;" // Modulate object with total light intensity
             ""
-            "   FragColor = vec4(litColor, 1.0);"
+            "   FragColor = vec4(litColor, 1.0);" // output of final shaded color
             "}";
 }
 
@@ -785,7 +786,7 @@ int main(int argc, char*argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
-        const float cameraAngularSpeed = 500.0f;
+        const float cameraAngularSpeed = 1.0f;
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
