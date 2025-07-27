@@ -25,34 +25,58 @@ const char* getVertexShaderSource()
 {
     // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
     return
-                "#version 330 core\n"
-                "layout (location = 0) in vec3 aPos;"
-                "layout (location = 1) in vec3 aColor;"
-                ""
-                "uniform mat4 worldMatrix;"
-                "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
-                "uniform mat4 projectionMatrix = mat4(1.0);"
-                ""
-                "out vec3 vertexColor;"
-                "void main()"
-                "{"
-                "   vertexColor = aColor;"
-                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
-                "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
-                "}";
+            "#version 330 core\n"
+            "layout (location = 0) in vec3 aPos;"
+            "layout (location = 1) in vec3 aColor;"
+            ""
+            "uniform mat4 worldMatrix;"
+            "uniform mat4 viewMatrix = mat4(1.0);"
+            "uniform mat4 projectionMatrix = mat4(1.0);"
+            ""
+            "out vec3 vertexColor;"
+            "out vec3 fragWorldPos;"  // new
+            ""
+            "void main()"
+            "{"
+            "   vertexColor = aColor;"
+            "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
+            "   fragWorldPos = worldPos.xyz;"
+            "   gl_Position = projectionMatrix * viewMatrix * worldPos;"
+            "}";
 }
 
 
 const char* getFragmentShaderSource()
 {
     return
-                "#version 330 core\n"
-                "in vec3 vertexColor;"
-                "out vec4 FragColor;"
-                "void main()"
-                "{"
-                "   FragColor = vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
-                "}";
+            "#version 330 core\n"
+            "in vec3 vertexColor;"
+            "in vec3 fragWorldPos;"  // passed from vertex shader
+            "out vec4 FragColor;"
+            ""
+            "uniform vec3 overrideColor;"
+            "uniform bool useOverride;"
+            ""
+            "uniform vec3 emitterPos[2];"        // array of emitter positions
+            "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
+            "uniform int numEmitters;"          // number of active emitters
+            ""
+            "void main()"
+            "{"
+            "   vec3 baseColor = useOverride ? overrideColor : vertexColor;"
+            ""
+            "   float totalAmbient = 0.0;"
+            "    for (int i = 0; i < numEmitters; ++i) {"
+            "       float distance = length(emitterPos[i] - fragWorldPos);"
+            "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
+            "       totalAmbient += intensity;"
+            "   }"
+            ""
+            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
+            "   vec3 litColor = baseColor * totalAmbient;"
+            ""
+            "   FragColor = vec4(litColor, 1.0);"
+            "}";
 }
 
 
@@ -216,7 +240,7 @@ int main(int argc, char*argv[])
     int mWidth, mHeight = 0;
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     glfwGetMonitorPhysicalSize(monitor, &mWidth, &mHeight);
-    GLFWwindow* window = glfwCreateWindow(mWidth, mHeight, "Comp371 - Lab 03", monitor, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Comp371 - Lab 03", NULL, NULL);
     if (window == NULL)
     {
         std::cerr << "Failed to create GLFW window" << std::endl;
@@ -255,7 +279,7 @@ int main(int argc, char*argv[])
     
     // Camera parameters for view transform
     vec3 cameraPosition(0.6f,1.0f,10.0f);
-    vec3 cameraLookAt(0.0f, 0.0f, -1.0f);
+    vec3 cameraLookAt= glm::normalize(vec3(0.0f, 0.0f, 0.0f) - cameraPosition);  // look toward the origin
     vec3 cameraUp(0.0f, 1.0f, 0.0f);
     
     // Other camera parameters
@@ -263,7 +287,6 @@ int main(int argc, char*argv[])
     float cameraFastSpeed = 2 * cameraSpeed;
     float cameraHorizontalAngle = 90.0f;
     float cameraVerticalAngle = 0.0f;
-    bool  cameraFirstPerson = true; // press 1 or 2 to toggle this variable
     
     // Set projection matrix for shader, this won't change
     mat4 projectionMatrix = glm::perspective(70.0f,            // field of view in degrees
@@ -316,33 +339,50 @@ int main(int argc, char*argv[])
         // Draw geometry
         glBindVertexArray(vao);
 
-        // Draw ground
-        mat4 groundWorldMatrix = translate(mat4(1.0f), vec3(0.0f, -0.01f, 0.0f)) * scale(mat4(1.0f), vec3(1000.0f, 0.02f, 1000.0f));
         GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &groundWorldMatrix[0][0]);
-        
-        glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices, starting at index 0
-        
-        // Draw pillars
-        mat4 pillarWorldMatrix = translate(mat4(1.0f), vec3(0.0f, 10.0f, 0.0f)) * scale(mat4(1.0f), vec3(2.0f, 20.0f, 2.0f));
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &pillarWorldMatrix[0][0]);
+
+        // Time-based animation value
+        float time = glfwGetTime();
+        float offset = sin(time) * 3.5f;
+        float offset2 = cos(time) * 3.0f;
+
+        // Uniform locations
+        GLuint useOverrideLoc = glGetUniformLocation(shaderProgram, "useOverride");
+        GLuint overrideColorLoc = glGetUniformLocation(shaderProgram, "overrideColor");
+
+        // First cube (static center)
+        glUniform1i(useOverrideLoc, GL_FALSE);
+        mat4 cubeCenter = glm::mat4(1.0f);
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeCenter[0][0]);
         glDrawArrays(GL_TRIANGLES, 0, 36);
-        
-        for (int i=0; i<20; ++i)
-        {
-            for (int j=0; j<20; ++j)
-            {
-                pillarWorldMatrix = translate(mat4(1.0f), vec3(- 100.0f + i * 10.0f, 5.0f, -100.0f + j * 10.0f)) * scale(mat4(1.0f), vec3(1.0f, 10.0f, 1.0f));
-                glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &pillarWorldMatrix[0][0]);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-                
-                pillarWorldMatrix = translate(mat4(1.0f), vec3(- 100.0f + i * 10.0f, 0.55f, -100.0f + j * 10.0f)) * rotate(mat4(1.0f), radians(180.0f), vec3(0.0f, 1.0f, 0.0f)) * scale(mat4(1.0f), vec3(1.1f, 1.1f, 1.1f));
-                glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &pillarWorldMatrix[0][0]);
-                glDrawArrays(GL_TRIANGLES, 0, 36);
-            }
-        }
-        
+
+        // Second cube (light)
+        glUniform1i(glGetUniformLocation(shaderProgram, "isEmissive"), true);
+        glUniform1i(glGetUniformLocation(shaderProgram, "useOverride"), GL_TRUE);
+        glUniform3f(glGetUniformLocation(shaderProgram, "overrideColor"), 1.0f, 1.0f, 1.0f);
+        glUniform1i(useOverrideLoc, GL_TRUE);
+        glUniform3f(overrideColorLoc, 1.0f, 1.0f, 1.0f);
+
+        mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeTop[0][0]);
         glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Third cube (light)
+        mat4 cubeRight = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f - offset, 0.0f - offset2, 0.0f - offset));
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeRight[0][0]);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Set light emitter positions **after** cube matrices are created
+        glm::vec3 emitterPositions[2] = {
+            glm::vec3(cubeTop[3]),
+            glm::vec3(cubeRight[3])
+        };
+        float emitterStrengths[2] = { 5.0f, 5.0f };
+
+        // Send emitter data to shader
+        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
 
         
         
@@ -353,16 +393,7 @@ int main(int argc, char*argv[])
         // Handle inputs
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
-        
-        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) // move camera down
-        {
-            cameraFirstPerson = true;
-        }
 
-        if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) // move camera down
-        {
-            cameraFirstPerson = false;
-        }
 
         
         // This was solution for Lab02 - Moving camera exercise
@@ -383,7 +414,7 @@ int main(int argc, char*argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
-        const float cameraAngularSpeed = 0.5f;
+        const float cameraAngularSpeed = 1.0f;
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
@@ -431,7 +462,7 @@ int main(int argc, char*argv[])
             cameraPosition += vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
         // adding anchor for down
-           if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
+         if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
         {
             cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
@@ -440,16 +471,7 @@ int main(int argc, char*argv[])
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
-        mat4 viewMatrix = mat4(1.0);
-        
-        if(cameraFirstPerson){
-            viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp );
-        } else {
-            float radius = 5.0f;
-            glm::vec3 position = cameraPosition - radius * cameraLookAt;
-            viewMatrix = lookAt(position, position + cameraLookAt, cameraUp);
-        }
-
+        mat4 viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
         GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
         glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
 
