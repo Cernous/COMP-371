@@ -200,6 +200,41 @@ const char* getTexturedFragmentShaderSource()
                 "}";
 }
 
+const char* getNormalVertexShaderSource()
+{
+    // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
+    return
+                "#version 330 core\n"
+                "layout (location = 0) in vec3 aPos;"
+                "layout (location = 1) in vec3 aNormal;"
+				""
+                "out vec3 vertexNormal;"
+				""
+                "uniform mat4 worldMatrix;"
+                "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
+                "uniform mat4 projectionMatrix = mat4(1.0);"
+                ""
+                "void main()"
+                "{"
+                "   " 	//TODO 2 We should pass along the normal to the fragment shader
+                "   vertexNormal = aNormal;"
+                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
+                "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+                "}";
+}
+
+const char* getNormalFragmentShaderSource()
+{
+    return
+                "#version 330 core\n"
+				"in vec3 vertexNormal;"
+				"out vec4 FragColor;"
+				"void main()"
+                "{"
+                "   FragColor = vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);" //TODO 2 Use the normals as fragment colors
+                "}";
+}
+
 
 int compileAndLinkShaders(const char* vertexShaderSource, const char* fragmentShaderSource)
 {
@@ -256,57 +291,6 @@ int compileAndLinkShaders(const char* vertexShaderSource, const char* fragmentSh
 
 int createTexturedCubeVertexArrayObject()
 {
-    // Cube model
-    // Change HERE ==== MUCH EASIER WAY TO PERFORM THIS
-    vec3 vertexArray[] = {  // position,                            color
-        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f), //left - red
-        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        
-        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f), // far - blue
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f), // bottom - turquoise
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        
-        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), // near - green
-        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f), // right - purple
-        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f), // top - yellow
-        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f)
-    };
     // Create a vertex array
     GLuint vertexArrayObject;
     glGenVertexArrays(1, &vertexArrayObject);
@@ -549,6 +533,7 @@ int main(int argc, char*argv[])
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders(getVertexShaderSource(), getFragmentShaderSource());
     int texturedShaderProgram = compileAndLinkShaders(getTexturedVertexShaderSource(), getTexturedFragmentShaderSource());
+    int normalShaderProgram = compileAndLinkShaders(getNormalVertexShaderSource(), getNormalFragmentShaderSource());
 
     string suzannePath = "Models/suzanne.obj";
     string tablePath = "Models/table.obj";
@@ -595,8 +580,8 @@ int main(int argc, char*argv[])
     
     // Define and upload geometry to the GPU here ...
     // Change HERE ==== MUCH EASIER WAY TO PERFORM THIS
-    int vao = createVertexBufferObject();
-    //int vao = createTexturedCubeVertexArrayObject();
+    // int vao = createVertexBufferObject();
+    int vao = createTexturedCubeVertexArrayObject();
     
     // For frame time
     float lastFrameTime = glfwGetTime();
@@ -623,6 +608,9 @@ int main(int argc, char*argv[])
         // Each frame, reset color of each pixel to glClearColor
         // @TODO 1 - Clear Depth Buffer Bit as well
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Draw textured geometry
+        glUseProgram(texturedShaderProgram);
         
         // Draw geometry
         glBindVertexArray(vao);
@@ -641,7 +629,7 @@ int main(int argc, char*argv[])
         // First cube (static center)
         glUniform1i(useOverrideLoc, GL_FALSE);
         mat4 cubeCenter = glm::mat4(1.0f);
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeCenter[0][0]);
+        setWorldMatrix(shaderProgram,cubeCenter);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Second cube (light)
@@ -652,12 +640,12 @@ int main(int argc, char*argv[])
         glUniform3f(overrideColorLoc, 1.0f, 1.0f, 1.0f);
 
         mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeTop[0][0]);
+        setWorldMatrix(shaderProgram,cubeTop);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Third cube (light)
         mat4 cubeRight = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f - offset, 0.0f - offset2, 0.0f - offset));
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeRight[0][0]);
+        setWorldMatrix(shaderProgram,cubeRight);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Set light emitter positions **after** cube matrices are created
@@ -673,15 +661,12 @@ int main(int argc, char*argv[])
         glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
         
 
-        // Draw textured geometry
-        glUseProgram(texturedShaderProgram);
-
         // Draw geometry
         mat4 cubeWorldMatrix = 
             translate(mat4(1.0f), vec3(1.0f, 2.3f, 1.2f)) * 
             rotate(mat4(1.0f), radians(65.0f), vec3(0.0f, 1.0f, 0.0f)) *
             scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
-        setWorldMatrix(shaderProgram, cubeWorldMatrix);
+        setWorldMatrix(normalShaderProgram, cubeWorldMatrix);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices, starting at index 0  
         
         glActiveTexture(GL_TEXTURE0);
