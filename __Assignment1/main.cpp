@@ -175,9 +175,13 @@ const char* getTexturedVertexShaderSource()
                 ""
                 "out vec3 vertexColor;"
                 "out vec2 vertexUV;"
+                "out vec3 fragWorldPos;"  // new
+                ""
                 "void main()"
                 "{"
                 "   vertexColor = aColor;"
+                "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
+                "   fragWorldPos = worldPos.xyz;"
                 "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
                 "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
                 "   vertexUV = aUV;"
@@ -191,12 +195,32 @@ const char* getTexturedFragmentShaderSource()
                 "in vec3 vertexColor;"
                 "in vec2 vertexUV;"
                 "uniform sampler2D textureSampler;"
+                "in vec3 fragWorldPos;"  // passed from vertex shader
+                ""
+                "uniform vec4 overrideColor;"
+                "uniform bool useOverride;"
+                "uniform vec3 emitterPos[2];"        // array of emitter positions
+                "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
+                "uniform int numEmitters;"          // number of active emitters
+                ""
                 ""
                 "out vec4 FragColor;"
                 "void main()"
                 "{"
                 "   vec4 textureColor = texture(textureSampler, vertexUV);"
-                "   FragColor = textureColor;" //* vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
+                "   vec4 baseColor = useOverride ? overrideColor : textureColor;"
+                ""
+                "   float totalAmbient = 0.0;"
+                "    for (int i = 0; i < numEmitters; ++i) {"
+                "       float distance = length(emitterPos[i] - fragWorldPos);"
+                "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
+                "       totalAmbient += intensity;"
+                "   }"
+                ""
+                "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
+                "   vec4 litColor = baseColor * totalAmbient;"
+                ""
+                "   FragColor = litColor;" //* vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
                 "}";
 }
 
@@ -209,6 +233,7 @@ const char* getNormalVertexShaderSource()
                 "layout (location = 1) in vec3 aNormal;"
 				""
                 "out vec3 vertexNormal;"
+                "out vec3 fragWorldPos;"  // new
 				""
                 "uniform mat4 worldMatrix;"
                 "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
@@ -218,6 +243,8 @@ const char* getNormalVertexShaderSource()
                 "{"
                 "   " 	//TODO 2 We should pass along the normal to the fragment shader
                 "   vertexNormal = aNormal;"
+                "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
+                "   fragWorldPos = worldPos.xyz;"
                 "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
                 "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
                 "}";
@@ -229,9 +256,30 @@ const char* getNormalFragmentShaderSource()
                 "#version 330 core\n"
 				"in vec3 vertexNormal;"
 				"out vec4 FragColor;"
+                "in vec3 fragWorldPos;"  // passed from vertex shader
+                ""
+                "uniform vec4 overrideColor;"
+                "uniform bool useOverride;"
+                "uniform vec3 emitterPos[2];"        // array of emitter positions
+                "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
+                "uniform int numEmitters;"          // number of active emitters
+                ""
+                ""
 				"void main()"
                 "{"
-                "   FragColor = vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);" //TODO 2 Use the normals as fragment colors
+                "   vec4 baseColor = useOverride ? overrideColor : vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);" //TODO 2 Use the normals as fragment colors"
+                ""
+                "   float totalAmbient = 0.0;"
+                "    for (int i = 0; i < numEmitters; ++i) {"
+                "       float distance = length(emitterPos[i] - fragWorldPos);"
+                "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
+                "       totalAmbient += intensity;"
+                "   }"
+                ""
+                "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
+                "   vec4 litColor = baseColor * totalAmbient;"
+                ""
+                "   FragColor = litColor;"
                 "}";
 }
 
@@ -572,10 +620,11 @@ int main(int argc, char*argv[])
     // Set View and Projection matrices on both shaders
     setViewMatrix(shaderProgram, viewMatrix);
     setViewMatrix(texturedShaderProgram, viewMatrix);
+    setViewMatrix(normalShaderProgram, viewMatrix);
 
     setProjectionMatrix(shaderProgram, projectionMatrix);
     setProjectionMatrix(texturedShaderProgram, projectionMatrix);
-
+    setProjectionMatrix(normalShaderProgram, projectionMatrix);
     
     
     // Define and upload geometry to the GPU here ...
@@ -610,7 +659,7 @@ int main(int argc, char*argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         // Draw textured geometry
-        glUseProgram(texturedShaderProgram);
+        glUseProgram(shaderProgram);
         
         // Draw geometry
         glBindVertexArray(vao);
@@ -619,8 +668,8 @@ int main(int argc, char*argv[])
 
         // Time-based animation value
         float time = glfwGetTime();
-        float offset = sin(time) * 3.5f;
-        float offset2 = cos(time) * 3.0f;
+        float offset = sin(time) * 5.5f;
+        float offset2 = cos(time) * 5.0f;
 
         // Uniform locations
         GLuint useOverrideLoc = glGetUniformLocation(shaderProgram, "useOverride");
@@ -653,25 +702,26 @@ int main(int argc, char*argv[])
             glm::vec3(cubeTop[3]),
             glm::vec3(cubeRight[3])
         };
-        float emitterStrengths[2] = { 5.0f, 5.0f };
-
-        // Send emitter data to shader
-        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
-        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
-        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
-        
+        float emitterStrengths[2] = { 10.0f, 10.0f };
 
         // Draw geometry
+        glUniform1i(useOverrideLoc, GL_FALSE);
         mat4 cubeWorldMatrix = 
             translate(mat4(1.0f), vec3(1.0f, 2.3f, 1.2f)) * 
             rotate(mat4(1.0f), radians(65.0f), vec3(0.0f, 1.0f, 0.0f)) *
             scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
-        setWorldMatrix(normalShaderProgram, cubeWorldMatrix);
+        setWorldMatrix(shaderProgram, cubeWorldMatrix);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices, starting at index 0  
         
+        // Send emitter data to shader
+        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
+
+        glUseProgram(texturedShaderProgram);
         glActiveTexture(GL_TEXTURE0);
         glUniform1i(glGetUniformLocation(texturedShaderProgram, "textureSampler"), 0);
-
+        
         // Draw Table
         glBindTexture(GL_TEXTURE_2D, tableTexID);
         mat4 tableWorldMatrix = 
@@ -694,6 +744,9 @@ int main(int argc, char*argv[])
         glBindVertexArray(suzanneVAO);
         glDrawArrays(GL_TRIANGLES, 0, suzanneVertices);
 
+        glUniform1i(glGetUniformLocation(texturedShaderProgram, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(texturedShaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(texturedShaderProgram, "ambientStrength"), 2, emitterStrengths);
         glBindVertexArray(0);
 
         // End Frame
