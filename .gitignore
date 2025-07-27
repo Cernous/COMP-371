@@ -1,3 +1,13 @@
+# Output files
 output/
 *.out
-*.jpg
+
+# Shader files
+*.vs
+*.fs
+*.glsl
+
+# 3D Mesh Binaries
+*.glb
+*.gltf
+*.obj
