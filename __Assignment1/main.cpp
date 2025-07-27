@@ -106,35 +106,58 @@ const char* getVertexShaderSource()
 {
     // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
     return
-                "#version 330 core\n"
-                "layout (location = 0) in vec3 aPos;"
-                "layout (location = 1) in vec3 aNormal;"
-				""
-                "out vec3 vertexNormal;"
-				""
-                "uniform mat4 worldMatrix;"
-                "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
-                "uniform mat4 projectionMatrix = mat4(1.0);"
-                ""
-                "void main()"
-                "{"
-                "   " 	//TODO 2 We should pass along the normal to the fragment shader
-                "   vertexNormal = aNormal;"
-                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
-                "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
-                "}";
+            "#version 330 core\n"
+            "layout (location = 0) in vec3 aPos;"
+            "layout (location = 1) in vec3 aColor;"
+            ""
+            "uniform mat4 worldMatrix;"
+            "uniform mat4 viewMatrix = mat4(1.0);"
+            "uniform mat4 projectionMatrix = mat4(1.0);"
+            ""
+            "out vec3 vertexColor;"
+            "out vec3 fragWorldPos;"  // new
+            ""
+            "void main()"
+            "{"
+            "   vertexColor = aColor;"
+            "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
+            "   fragWorldPos = worldPos.xyz;"
+            "   gl_Position = projectionMatrix * viewMatrix * worldPos;"
+            "}";
 }
+
 
 const char* getFragmentShaderSource()
 {
     return
-                "#version 330 core\n"
-				"in vec3 vertexNormal;"
-				"out vec4 FragColor;"
-				"void main()"
-                "{"
-                "   FragColor = vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);" //TODO 2 Use the normals as fragment colors
-                "}";
+            "#version 330 core\n"
+            "in vec3 vertexColor;"
+            "in vec3 fragWorldPos;"  // passed from vertex shader
+            "out vec4 FragColor;"
+            ""
+            "uniform vec3 overrideColor;"
+            "uniform bool useOverride;"
+            ""
+            "uniform vec3 emitterPos[2];"        // array of emitter positions
+            "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
+            "uniform int numEmitters;"          // number of active emitters
+            ""
+            "void main()"
+            "{"
+            "   vec3 baseColor = useOverride ? overrideColor : vertexColor;"
+            ""
+            "   float totalAmbient = 0.0;"
+            "    for (int i = 0; i < numEmitters; ++i) {"
+            "       float distance = length(emitterPos[i] - fragWorldPos);"
+            "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
+            "       totalAmbient += intensity;"
+            "   }"
+            ""
+            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
+            "   vec3 litColor = baseColor * totalAmbient;"
+            ""
+            "   FragColor = vec4(litColor, 1.0);"
+            "}";
 }
 
 const char* getTexturedVertexShaderSource()
@@ -233,6 +256,57 @@ int compileAndLinkShaders(const char* vertexShaderSource, const char* fragmentSh
 
 int createTexturedCubeVertexArrayObject()
 {
+    // Cube model
+    // Change HERE ==== MUCH EASIER WAY TO PERFORM THIS
+    vec3 vertexArray[] = {  // position,                            color
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f), //left - red
+        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
+        
+        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
+        
+        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f), // far - blue
+        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        
+        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
+        
+        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f), // bottom - turquoise
+        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
+        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
+        
+        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
+        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
+        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
+        
+        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), // near - green
+        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        
+        vec3( 0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
+        
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f), // right - purple
+        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
+        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
+        
+        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
+        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
+        
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f), // top - yellow
+        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
+        
+        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f),
+        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
+        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f)
+    };
     // Create a vertex array
     GLuint vertexArrayObject;
     glGenVertexArrays(1, &vertexArrayObject);
@@ -295,8 +369,6 @@ void setWorldMatrix(int shaderProgram, mat4 worldMatrix)
 	GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
 	glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
 }
-
-
 
 GLuint loadTexture(const char *filename)
 {
@@ -457,7 +529,6 @@ int main(int argc, char*argv[])
     // @TODO 3 - Disable mouse cursor
     // ...
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     
     // Initialize GLEW
     glewExperimental = true; // Needed for core profile
@@ -467,7 +538,7 @@ int main(int argc, char*argv[])
         return -1;
     }
 
-    // // Very important for different scaling and screen size ratio
+    // Very important for different scaling and screen size ratio
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
@@ -520,8 +591,12 @@ int main(int argc, char*argv[])
     setProjectionMatrix(shaderProgram, projectionMatrix);
     setProjectionMatrix(texturedShaderProgram, projectionMatrix);
 
+    
+    
     // Define and upload geometry to the GPU here ...
-    int vao = createTexturedCubeVertexArrayObject();
+    // Change HERE ==== MUCH EASIER WAY TO PERFORM THIS
+    int vao = createVertexBufferObject();
+    //int vao = createTexturedCubeVertexArrayObject();
     
     // For frame time
     float lastFrameTime = glfwGetTime();
@@ -548,12 +623,60 @@ int main(int argc, char*argv[])
         // Each frame, reset color of each pixel to glClearColor
         // @TODO 1 - Clear Depth Buffer Bit as well
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        // Draw geometry
+        glBindVertexArray(vao);
+
+        GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
+
+        // Time-based animation value
+        float time = glfwGetTime();
+        float offset = sin(time) * 3.5f;
+        float offset2 = cos(time) * 3.0f;
+
+        // Uniform locations
+        GLuint useOverrideLoc = glGetUniformLocation(shaderProgram, "useOverride");
+        GLuint overrideColorLoc = glGetUniformLocation(shaderProgram, "overrideColor");
+
+        // First cube (static center)
+        glUniform1i(useOverrideLoc, GL_FALSE);
+        mat4 cubeCenter = glm::mat4(1.0f);
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeCenter[0][0]);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Second cube (light)
+        glUniform1i(glGetUniformLocation(shaderProgram, "isEmissive"), true);
+        glUniform1i(glGetUniformLocation(shaderProgram, "useOverride"), GL_TRUE);
+        glUniform3f(glGetUniformLocation(shaderProgram, "overrideColor"), 1.0f, 1.0f, 1.0f);
+        glUniform1i(useOverrideLoc, GL_TRUE);
+        glUniform3f(overrideColorLoc, 1.0f, 1.0f, 1.0f);
+
+        mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeTop[0][0]);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Third cube (light)
+        mat4 cubeRight = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f - offset, 0.0f - offset2, 0.0f - offset));
+        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeRight[0][0]);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+        // Set light emitter positions **after** cube matrices are created
+        glm::vec3 emitterPositions[2] = {
+            glm::vec3(cubeTop[3]),
+            glm::vec3(cubeRight[3])
+        };
+        float emitterStrengths[2] = { 5.0f, 5.0f };
+
+        // Send emitter data to shader
+        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
+        
 
         // Draw textured geometry
         glUseProgram(texturedShaderProgram);
 
         // Draw geometry
-        glBindVertexArray(vao);
         mat4 cubeWorldMatrix = 
             translate(mat4(1.0f), vec3(1.0f, 2.3f, 1.2f)) * 
             rotate(mat4(1.0f), radians(65.0f), vec3(0.0f, 1.0f, 0.0f)) *
@@ -573,7 +696,7 @@ int main(int argc, char*argv[])
         glBindVertexArray(tableVAO);
         glDrawArrays(GL_TRIANGLES, 0, tableVertices);
         
-        // Spinning cube at camera position
+        // Spinning Suzanne at camera position
         spinningObjAngle += 45.0f * dt;
 
         // Draw Suzanne
@@ -600,7 +723,6 @@ int main(int argc, char*argv[])
         {
             cameraFirstPerson = true;
         }
-
         if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) // move camera down
         {
             cameraFirstPerson = false;
@@ -638,9 +760,6 @@ int main(int argc, char*argv[])
         vec3 cameraSideVector = glm::cross(cameraLookAt, vec3(0.0f, 1.0f, 0.0f));
 
         glm::normalize(cameraSideVector);
-        
-        // @TODO 5 = use camera lookat and side vectors to update positions with ASDW
-        // adjust code below
         if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS)
         {
             cameraPosition += cameraLookAt * dt * currentCameraSpeed;
@@ -662,12 +781,12 @@ int main(int argc, char*argv[])
         }
 
         // Adding Spacebar for up
-        if (glfwGetKey(window, GLFW_KEY_SPACE ) == GLFW_PRESS)
+         if (glfwGetKey(window, GLFW_KEY_SPACE ) == GLFW_PRESS)
         {
-            cameraPosition += vec3(0.0f,1.0f,0.0f) * dt * currentCameraSpeed;
+            cameraPosition += vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
         // adding anchor for down
-        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
+         if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
         {
             cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
@@ -676,6 +795,11 @@ int main(int argc, char*argv[])
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
+// <<<<<<< gordito
+//         mat4 viewMatrix = lookAt(cameraPosition, cameraPosition + cameraLookAt, cameraUp);
+//         GLuint viewMatrixLocation = glGetUniformLocation(shaderProgram, "viewMatrix");
+//         glUniformMatrix4fv(viewMatrixLocation, 1, GL_FALSE, &viewMatrix[0][0]);
+// =======
         mat4 viewMatrix = mat4(1.0);
         
         if(cameraFirstPerson){
