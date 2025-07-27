@@ -10,3 +10,4 @@ output/
 # 3D Mesh Binaries
 *.glb
 *.gltf
+*.obj
