@@ -11,3 +11,6 @@ output/
 *.glb
 *.gltf
 *.obj
+
+# pdf tutorials
+*.pdf
