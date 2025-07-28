@@ -287,12 +287,12 @@ int main(int argc, char*argv[])
 
 	//TODO 1 load the more interesting model: "heracles.obj"
     int heraclesVertices;
-    GLuint heraclesVAO = setupModelVBO(heraclesPath, heraclesVertices);
+    GLuint heraclesVAO = setupModelEBO(heraclesPath, heraclesVertices);
 
 	//TODO 3 load the models as EBOs instead of only VBOs
 
 	int cubeVertices;
-	GLuint cubeVAO = setupModelVBO(cubePath, cubeVertices);
+	GLuint cubeVAO = setupModelEBO(cubePath, cubeVertices);
 
 	int activeVAOVertices = cubeVertices;
 	GLuint activeVAO = cubeVAO;
@@ -369,7 +369,7 @@ int main(int argc, char*argv[])
 		//Draw the stored vertex objects
 		glBindVertexArray(activeVAO);
 		//TODO3 Draw model as elements, instead of as arrays
-		glDrawArrays(GL_TRIANGLES, 0, activeVAOVertices);
+		glDrawElements(GL_TRIANGLES, activeVAOVertices, GL_UNSIGNED_INT, 0);
 
 		glBindVertexArray(0);
 

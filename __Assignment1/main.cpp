@@ -1,7 +1,5 @@
 //
-// COMP 371 Labs Framework
-//
-// Created by Nicolas Bergeron on 20/06/2019.
+// COMP 371 Labs Assignment 1
 //
 
 #include <iostream>
@@ -26,6 +24,9 @@
 
 using namespace glm;
 using namespace std;
+
+// Macros
+#define CAMERASENSITIVITY 1.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
 
 GLuint loadTexture(const char *filename);
 
@@ -115,13 +116,13 @@ const char* getVertexShaderSource()
             "uniform mat4 projectionMatrix = mat4(1.0);"
             ""
             "out vec3 vertexColor;"
-            "out vec3 fragWorldPos;"  // new
+            "out vec3 fragWorldPos;"  // new position for light
             ""
             "void main()"
             "{"
             "   vertexColor = aColor;"
             "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
-            "   fragWorldPos = worldPos.xyz;"
+            "   fragWorldPos = worldPos.xyz;" // extracts the world position of vertex for lighting
             "   gl_Position = projectionMatrix * viewMatrix * worldPos;"
             "}";
 }
@@ -147,16 +148,17 @@ const char* getFragmentShaderSource()
             "   vec3 baseColor = useOverride ? overrideColor : vertexColor;"
             ""
             "   float totalAmbient = 0.0;"
+            // For each light calculate effect using inverse-square falloff
             "    for (int i = 0; i < numEmitters; ++i) {"
             "       float distance = length(emitterPos[i] - fragWorldPos);"
-            "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
-            "       totalAmbient += intensity;"
+            "       float intensity = ambientStrength[i] / (distance * distance);"  
+            "       totalAmbient += intensity;" //adds up all light contributions from all emiters
             "   }"
             ""
-            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
-            "   vec3 litColor = baseColor * totalAmbient;"
+            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness to prevent over-brightening
+            "   vec3 litColor = baseColor * totalAmbient;" // Modulate object with total light intensity
             ""
-            "   FragColor = vec4(litColor, 1.0);"
+            "   FragColor = vec4(litColor, 1.0);" // output of final shaded color
             "}";
 }
 
@@ -175,13 +177,17 @@ const char* getTexturedVertexShaderSource()
                 ""
                 "out vec3 vertexColor;"
                 "out vec2 vertexUV;"
+                "out vec3 fragWorldPos;"  // new
+                ""
                 "void main()"
                 "{"
                 "   vertexColor = aColor;"
+                "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
+                "   fragWorldPos = worldPos.xyz;"
                 "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
                 "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
                 "   vertexUV = aUV;"
-                "}"; //TODO: Replace this with the actual textured vertex shader
+                "}";
 }
 
 const char* getTexturedFragmentShaderSource()
@@ -191,12 +197,91 @@ const char* getTexturedFragmentShaderSource()
                 "in vec3 vertexColor;"
                 "in vec2 vertexUV;"
                 "uniform sampler2D textureSampler;"
+                "in vec3 fragWorldPos;"  // passed from vertex shader
+                ""
+                "uniform vec4 overrideColor;"
+                "uniform bool useOverride;"
+                "uniform vec3 emitterPos[2];"        // array of emitter positions
+                "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
+                "uniform int numEmitters;"          // number of active emitters
+                ""
                 ""
                 "out vec4 FragColor;"
                 "void main()"
                 "{"
                 "   vec4 textureColor = texture(textureSampler, vertexUV);"
-                "   FragColor = textureColor;" //* vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
+                "   vec4 baseColor = useOverride ? overrideColor : textureColor;"
+                ""
+                "   float totalAmbient = 0.0;"
+                "    for (int i = 0; i < numEmitters; ++i) {"
+                "       float distance = length(emitterPos[i] - fragWorldPos);"
+                "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
+                "       totalAmbient += intensity;"
+                "   }"
+                ""
+                "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
+                "   vec4 litColor = baseColor * totalAmbient;"
+                ""
+                "   FragColor = litColor;" //* vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
+                "}";
+}
+
+const char* getNormalVertexShaderSource()
+{
+    // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
+    return
+                "#version 330 core\n"
+                "layout (location = 0) in vec3 aPos;"
+                "layout (location = 1) in vec3 aNormal;"
+				""
+                "out vec3 vertexNormal;"
+                "out vec3 fragWorldPos;"  // new
+				""
+                "uniform mat4 worldMatrix;"
+                "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
+                "uniform mat4 projectionMatrix = mat4(1.0);"
+                ""
+                "void main()"
+                "{"
+                "   " 	
+                "   vertexNormal = aNormal;"
+                "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
+                "   fragWorldPos = worldPos.xyz;"
+                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
+                "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
+                "}";
+}
+
+const char* getNormalFragmentShaderSource()
+{
+    return
+                "#version 330 core\n"
+				"in vec3 vertexNormal;"
+				"out vec4 FragColor;"
+                "in vec3 fragWorldPos;"  // passed from vertex shader
+                ""
+                "uniform vec4 overrideColor;"
+                "uniform bool useOverride;"
+                "uniform vec3 emitterPos[2];"        // array of emitter positions
+                "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
+                "uniform int numEmitters;"          // number of active emitters
+                ""
+                ""
+				"void main()"
+                "{"
+                "   vec4 baseColor = useOverride ? overrideColor : vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);"
+                ""
+                "   float totalAmbient = 0.0;"
+                "    for (int i = 0; i < numEmitters; ++i) {"
+                "       float distance = length(emitterPos[i] - fragWorldPos);"
+                "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
+                "       totalAmbient += intensity;"
+                "   }"
+                ""
+                "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
+                "   vec4 litColor = baseColor * totalAmbient;"
+                ""
+                "   FragColor = litColor;"
                 "}";
 }
 
@@ -256,57 +341,6 @@ int compileAndLinkShaders(const char* vertexShaderSource, const char* fragmentSh
 
 int createTexturedCubeVertexArrayObject()
 {
-    // Cube model
-    // Change HERE ==== MUCH EASIER WAY TO PERFORM THIS
-    vec3 vertexArray[] = {  // position,                            color
-        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f), //left - red
-        vec3(-0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        
-        vec3(-0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f), // far - blue
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f, 0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f), // bottom - turquoise
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3( 0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 1.0f),
-        vec3(-0.5f,-0.5f,-0.5f), vec3(0.0f, 1.0f, 1.0f),
-        
-        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f), // near - green
-        vec3(-0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(0.0f, 1.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f), // right - purple
-        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f,-0.5f,-0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
-        vec3( 0.5f,-0.5f, 0.5f), vec3(1.0f, 0.0f, 1.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f), // top - yellow
-        vec3( 0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        
-        vec3( 0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f,-0.5f), vec3(1.0f, 1.0f, 0.0f),
-        vec3(-0.5f, 0.5f, 0.5f), vec3(1.0f, 1.0f, 0.0f)
-    };
     // Create a vertex array
     GLuint vertexArrayObject;
     glGenVertexArrays(1, &vertexArrayObject);
@@ -406,7 +440,7 @@ GLuint loadTexture(const char *filename)
     stbi_image_free(data);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    return textureId; //TODO: replace with texture loading code
+    return textureId; 
 }
 
 GLuint setupModelVBO(string path, int& vertexCount) {
@@ -513,10 +547,12 @@ int main(int argc, char*argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    // Create Window and rendering context using GLFW, resolution is 800x600
+    // make it full screen but its too laggy
     // int mWidth, mHeight = 0;
     // GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     // glfwGetMonitorPhysicalSize(monitor, &mWidth, &mHeight);
+
+    // Create Window and rendering context using GLFW, resolution is 800x600
     GLFWwindow* window = glfwCreateWindow(800, 600, "Comp371 - Assignment1", NULL, NULL);
     if (window == NULL)
     {
@@ -526,8 +562,7 @@ int main(int argc, char*argv[])
     }
     glfwMakeContextCurrent(window);
 
-    // @TODO 3 - Disable mouse cursor
-    // ...
+    
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
     // Initialize GLEW
@@ -538,7 +573,7 @@ int main(int argc, char*argv[])
         return -1;
     }
 
-    // Very important for different scaling and screen size ratio
+    // Very important for different scaling and screen size ratio - Readjust the viewport for the wayland user
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
@@ -549,12 +584,15 @@ int main(int argc, char*argv[])
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders(getVertexShaderSource(), getFragmentShaderSource());
     int texturedShaderProgram = compileAndLinkShaders(getTexturedVertexShaderSource(), getTexturedFragmentShaderSource());
+    int normalShaderProgram = compileAndLinkShaders(getNormalVertexShaderSource(), getNormalFragmentShaderSource());
 
     string suzannePath = "Models/suzanne.obj";
     string tablePath = "Models/table.obj";
 
     GLuint suzanneTexID = loadTexture("Textures/Suzanne_Tex.png");
     GLuint tableTexID = loadTexture("Textures/Table_Tex.png");
+
+    // Why not use EBO? I was too lazy to see if it worked with textures
 
     int suzanneVertices;
     GLuint suzanneVAO = setupModelVBO(suzannePath, suzanneVertices);
@@ -587,16 +625,17 @@ int main(int argc, char*argv[])
     // Set View and Projection matrices on both shaders
     setViewMatrix(shaderProgram, viewMatrix);
     setViewMatrix(texturedShaderProgram, viewMatrix);
+    setViewMatrix(normalShaderProgram, viewMatrix); //normal shader seems to be broken but it is added here in case i want to use it
 
     setProjectionMatrix(shaderProgram, projectionMatrix);
     setProjectionMatrix(texturedShaderProgram, projectionMatrix);
-
+    setProjectionMatrix(normalShaderProgram, projectionMatrix);
     
     
     // Define and upload geometry to the GPU here ...
     // Change HERE ==== MUCH EASIER WAY TO PERFORM THIS
-    int vao = createVertexBufferObject();
-    //int vao = createTexturedCubeVertexArrayObject();
+    // int vao = createVertexBufferObject();
+    int vao = createTexturedCubeVertexArrayObject();
     
     // For frame time
     float lastFrameTime = glfwGetTime();
@@ -606,9 +645,9 @@ int main(int argc, char*argv[])
     
     // Other OpenGL states to set once
     // Enable Backface culling
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     
-    // @TODO 1 - Enable Depth Test
+    //Enable Depth Test
     glEnable(GL_DEPTH_TEST);
 
     float spinningObjAngle = 0.0f;
@@ -621,8 +660,11 @@ int main(int argc, char*argv[])
         lastFrameTime += dt;
 
         // Each frame, reset color of each pixel to glClearColor
-        // @TODO 1 - Clear Depth Buffer Bit as well
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Use shaderProgram to draw the cubes
+        glUseProgram(shaderProgram);
         
         // Draw geometry
         glBindVertexArray(vao);
@@ -631,8 +673,8 @@ int main(int argc, char*argv[])
 
         // Time-based animation value
         float time = glfwGetTime();
-        float offset = sin(time) * 3.5f;
-        float offset2 = cos(time) * 3.0f;
+        float offset = sin(time) * 5.5f;
+        float offset2 = cos(time) * 5.0f;
 
         // Uniform locations
         GLuint useOverrideLoc = glGetUniformLocation(shaderProgram, "useOverride");
@@ -641,7 +683,7 @@ int main(int argc, char*argv[])
         // First cube (static center)
         glUniform1i(useOverrideLoc, GL_FALSE);
         mat4 cubeCenter = glm::mat4(1.0f);
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeCenter[0][0]);
+        setWorldMatrix(shaderProgram,cubeCenter);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Second cube (light)
@@ -652,12 +694,12 @@ int main(int argc, char*argv[])
         glUniform3f(overrideColorLoc, 1.0f, 1.0f, 1.0f);
 
         mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeTop[0][0]);
+        setWorldMatrix(shaderProgram,cubeTop);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Third cube (light)
         mat4 cubeRight = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f - offset, 0.0f - offset2, 0.0f - offset));
-        glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &cubeRight[0][0]);
+        setWorldMatrix(shaderProgram,cubeRight);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Set light emitter positions **after** cube matrices are created
@@ -665,18 +707,10 @@ int main(int argc, char*argv[])
             glm::vec3(cubeTop[3]),
             glm::vec3(cubeRight[3])
         };
-        float emitterStrengths[2] = { 5.0f, 5.0f };
-
-        // Send emitter data to shader
-        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
-        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
-        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
-        
-
-        // Draw textured geometry
-        glUseProgram(texturedShaderProgram);
+        float emitterStrengths[2] = { 10.0f, 10.0f };
 
         // Draw geometry
+        glUniform1i(useOverrideLoc, GL_FALSE);
         mat4 cubeWorldMatrix = 
             translate(mat4(1.0f), vec3(1.0f, 2.3f, 1.2f)) * 
             rotate(mat4(1.0f), radians(65.0f), vec3(0.0f, 1.0f, 0.0f)) *
@@ -684,9 +718,16 @@ int main(int argc, char*argv[])
         setWorldMatrix(shaderProgram, cubeWorldMatrix);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices, starting at index 0  
         
+        // Send emitter data to shader
+        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
+
+        // Switch to the textured shader program to draw the more sophisticated meshes that have textures
+        glUseProgram(texturedShaderProgram);
         glActiveTexture(GL_TEXTURE0);
         glUniform1i(glGetUniformLocation(texturedShaderProgram, "textureSampler"), 0);
-
+        
         // Draw Table
         glBindTexture(GL_TEXTURE_2D, tableTexID);
         mat4 tableWorldMatrix = 
@@ -696,7 +737,7 @@ int main(int argc, char*argv[])
         glBindVertexArray(tableVAO);
         glDrawArrays(GL_TRIANGLES, 0, tableVertices);
         
-        // Spinning Suzanne at camera position
+        // Spinning Suzanne
         spinningObjAngle += 45.0f * dt;
 
         // Draw Suzanne
@@ -709,6 +750,9 @@ int main(int argc, char*argv[])
         glBindVertexArray(suzanneVAO);
         glDrawArrays(GL_TRIANGLES, 0, suzanneVertices);
 
+        glUniform1i(glGetUniformLocation(texturedShaderProgram, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(texturedShaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(texturedShaderProgram, "ambientStrength"), 2, emitterStrengths);
         glBindVertexArray(0);
 
         // End Frame
@@ -716,6 +760,7 @@ int main(int argc, char*argv[])
         glfwPollEvents();
         
         // Handle inputs
+        // Does it really matter? Probably not
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
         
@@ -735,7 +780,6 @@ int main(int argc, char*argv[])
         float currentCameraSpeed = (fastCam) ? cameraFastSpeed : cameraSpeed;
         
         
-        // @TODO 4 - Calculate mouse motion dx and dy
         //         - Update camera horizontal and vertical angle
         //...
         double mousePosX, mousePosY;
@@ -747,7 +791,7 @@ int main(int argc, char*argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
-        const float cameraAngularSpeed = 500.0f;
+        const float cameraAngularSpeed = CAMERASENSITIVITY; 
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
@@ -791,7 +835,6 @@ int main(int argc, char*argv[])
             cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
       
-        // TODO 6
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
