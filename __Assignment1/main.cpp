@@ -1,7 +1,5 @@
 //
-// COMP 371 Labs Framework
-//
-// Created by Nicolas Bergeron on 20/06/2019.
+// COMP 371 Labs Assignment 1
 //
 
 #include <iostream>
@@ -26,6 +24,9 @@
 
 using namespace glm;
 using namespace std;
+
+// Macros
+#define CAMERASENSITIVITY 1.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
 
 GLuint loadTexture(const char *filename);
 
@@ -186,7 +187,7 @@ const char* getTexturedVertexShaderSource()
                 "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
                 "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
                 "   vertexUV = aUV;"
-                "}"; //TODO: Replace this with the actual textured vertex shader
+                "}";
 }
 
 const char* getTexturedFragmentShaderSource()
@@ -242,7 +243,7 @@ const char* getNormalVertexShaderSource()
                 ""
                 "void main()"
                 "{"
-                "   " 	//TODO 2 We should pass along the normal to the fragment shader
+                "   " 	
                 "   vertexNormal = aNormal;"
                 "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
                 "   fragWorldPos = worldPos.xyz;"
@@ -268,7 +269,7 @@ const char* getNormalFragmentShaderSource()
                 ""
 				"void main()"
                 "{"
-                "   vec4 baseColor = useOverride ? overrideColor : vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);" //TODO 2 Use the normals as fragment colors"
+                "   vec4 baseColor = useOverride ? overrideColor : vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);"
                 ""
                 "   float totalAmbient = 0.0;"
                 "    for (int i = 0; i < numEmitters; ++i) {"
@@ -439,7 +440,7 @@ GLuint loadTexture(const char *filename)
     stbi_image_free(data);
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    return textureId; //TODO: replace with texture loading code
+    return textureId; 
 }
 
 GLuint setupModelVBO(string path, int& vertexCount) {
@@ -546,10 +547,12 @@ int main(int argc, char*argv[])
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    // Create Window and rendering context using GLFW, resolution is 800x600
+    // make it full screen but its too laggy
     // int mWidth, mHeight = 0;
     // GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     // glfwGetMonitorPhysicalSize(monitor, &mWidth, &mHeight);
+
+    // Create Window and rendering context using GLFW, resolution is 800x600
     GLFWwindow* window = glfwCreateWindow(800, 600, "Comp371 - Assignment1", NULL, NULL);
     if (window == NULL)
     {
@@ -559,8 +562,7 @@ int main(int argc, char*argv[])
     }
     glfwMakeContextCurrent(window);
 
-    // @TODO 3 - Disable mouse cursor
-    // ...
+    
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     
     // Initialize GLEW
@@ -571,7 +573,7 @@ int main(int argc, char*argv[])
         return -1;
     }
 
-    // Very important for different scaling and screen size ratio
+    // Very important for different scaling and screen size ratio - Readjust the viewport for the wayland user
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     glViewport(0, 0, width, height);
@@ -589,6 +591,8 @@ int main(int argc, char*argv[])
 
     GLuint suzanneTexID = loadTexture("Textures/Suzanne_Tex.png");
     GLuint tableTexID = loadTexture("Textures/Table_Tex.png");
+
+    // Why not use EBO? I was too lazy to see if it worked with textures
 
     int suzanneVertices;
     GLuint suzanneVAO = setupModelVBO(suzannePath, suzanneVertices);
@@ -621,7 +625,7 @@ int main(int argc, char*argv[])
     // Set View and Projection matrices on both shaders
     setViewMatrix(shaderProgram, viewMatrix);
     setViewMatrix(texturedShaderProgram, viewMatrix);
-    setViewMatrix(normalShaderProgram, viewMatrix);
+    setViewMatrix(normalShaderProgram, viewMatrix); //normal shader seems to be broken but it is added here in case i want to use it
 
     setProjectionMatrix(shaderProgram, projectionMatrix);
     setProjectionMatrix(texturedShaderProgram, projectionMatrix);
@@ -641,9 +645,9 @@ int main(int argc, char*argv[])
     
     // Other OpenGL states to set once
     // Enable Backface culling
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     
-    // @TODO 1 - Enable Depth Test
+    //Enable Depth Test
     glEnable(GL_DEPTH_TEST);
 
     float spinningObjAngle = 0.0f;
@@ -656,10 +660,10 @@ int main(int argc, char*argv[])
         lastFrameTime += dt;
 
         // Each frame, reset color of each pixel to glClearColor
-        // @TODO 1 - Clear Depth Buffer Bit as well
+        
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Draw textured geometry
+        // Use shaderProgram to draw the cubes
         glUseProgram(shaderProgram);
         
         // Draw geometry
@@ -719,6 +723,7 @@ int main(int argc, char*argv[])
         glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
         glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
 
+        // Switch to the textured shader program to draw the more sophisticated meshes that have textures
         glUseProgram(texturedShaderProgram);
         glActiveTexture(GL_TEXTURE0);
         glUniform1i(glGetUniformLocation(texturedShaderProgram, "textureSampler"), 0);
@@ -732,7 +737,7 @@ int main(int argc, char*argv[])
         glBindVertexArray(tableVAO);
         glDrawArrays(GL_TRIANGLES, 0, tableVertices);
         
-        // Spinning Suzanne at camera position
+        // Spinning Suzanne
         spinningObjAngle += 45.0f * dt;
 
         // Draw Suzanne
@@ -755,6 +760,7 @@ int main(int argc, char*argv[])
         glfwPollEvents();
         
         // Handle inputs
+        // Does it really matter? Probably not
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
         
@@ -774,7 +780,6 @@ int main(int argc, char*argv[])
         float currentCameraSpeed = (fastCam) ? cameraFastSpeed : cameraSpeed;
         
         
-        // @TODO 4 - Calculate mouse motion dx and dy
         //         - Update camera horizontal and vertical angle
         //...
         double mousePosX, mousePosY;
@@ -786,7 +791,7 @@ int main(int argc, char*argv[])
         lastMousePosX = mousePosX;
         lastMousePosY = mousePosY;
 
-        const float cameraAngularSpeed = 1.0f;
+        const float cameraAngularSpeed = CAMERASENSITIVITY; 
         cameraHorizontalAngle -= dx * cameraAngularSpeed * dt;
         cameraVerticalAngle -= dy * cameraAngularSpeed * dt;
 
@@ -830,7 +835,6 @@ int main(int argc, char*argv[])
             cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
       
-        // TODO 6
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
