@@ -26,7 +26,7 @@ using namespace glm;
 using namespace std;
 
 // Macros
-#define CAMERASENSITIVITY 1.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
+#define CAMERASENSITIVITY 500.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
 
 GLuint loadTexture(const char *filename);
 
@@ -645,7 +645,7 @@ int main(int argc, char*argv[])
     
     // Other OpenGL states to set once
     // Enable Backface culling
-    glEnable(GL_CULL_FACE);
+    // glEnable(GL_CULL_FACE);
     
     //Enable Depth Test
     glEnable(GL_DEPTH_TEST);
