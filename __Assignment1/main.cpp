@@ -21,12 +21,12 @@
 
 #include "OBJloader.h"  //For loading .obj files
 #include "OBJloaderV2.h"  //For loading .obj files using a polygon list format
-
+#include "shaderloader.h" // for loading glsl shader programs
 using namespace glm;
 using namespace std;
 
 // Macros
-#define CAMERASENSITIVITY 500.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
+#define CAMERASENSITIVITY 1.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
 
 GLuint loadTexture(const char *filename);
 
@@ -102,185 +102,6 @@ const TexturedColoredVertex texturedCubeVertexArray[] = {  // position,         
 };
 
 int createTexturedCubeVertexArrayObject();
-
-const char* getVertexShaderSource()
-{
-    // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
-    return
-            "#version 330 core\n"
-            "layout (location = 0) in vec3 aPos;"
-            "layout (location = 1) in vec3 aColor;"
-            ""
-            "uniform mat4 worldMatrix;"
-            "uniform mat4 viewMatrix = mat4(1.0);"
-            "uniform mat4 projectionMatrix = mat4(1.0);"
-            ""
-            "out vec3 vertexColor;"
-            "out vec3 fragWorldPos;"  // new position for light
-            ""
-            "void main()"
-            "{"
-            "   vertexColor = aColor;"
-            "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
-            "   fragWorldPos = worldPos.xyz;" // extracts the world position of vertex for lighting
-            "   gl_Position = projectionMatrix * viewMatrix * worldPos;"
-            "}";
-}
-
-
-const char* getFragmentShaderSource()
-{
-    return
-            "#version 330 core\n"
-            "in vec3 vertexColor;"
-            "in vec3 fragWorldPos;"  // passed from vertex shader
-            "out vec4 FragColor;"
-            ""
-            "uniform vec3 overrideColor;"
-            "uniform bool useOverride;"
-            ""
-            "uniform vec3 emitterPos[2];"        // array of emitter positions
-            "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
-            "uniform int numEmitters;"          // number of active emitters
-            ""
-            "void main()"
-            "{"
-            "   vec3 baseColor = useOverride ? overrideColor : vertexColor;"
-            ""
-            "   float totalAmbient = 0.0;"
-            // For each light calculate effect using inverse-square falloff
-            "    for (int i = 0; i < numEmitters; ++i) {"
-            "       float distance = length(emitterPos[i] - fragWorldPos);"
-            "       float intensity = ambientStrength[i] / (distance * distance);"  
-            "       totalAmbient += intensity;" //adds up all light contributions from all emiters
-            "   }"
-            ""
-            "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness to prevent over-brightening
-            "   vec3 litColor = baseColor * totalAmbient;" // Modulate object with total light intensity
-            ""
-            "   FragColor = vec4(litColor, 1.0);" // output of final shaded color
-            "}";
-}
-
-const char* getTexturedVertexShaderSource()
-{
-    // use a string for your shader code, in the assignment, shaders will be stored in .glsl files
-    return
-                "#version 330 core\n"
-                "layout (location = 0) in vec3 aPos;"
-                "layout (location = 1) in vec3 aColor;"
-                "layout (location = 2) in vec2 aUV;"
-                ""
-                "uniform mat4 worldMatrix;"
-                "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
-                "uniform mat4 projectionMatrix = mat4(1.0);"
-                ""
-                "out vec3 vertexColor;"
-                "out vec2 vertexUV;"
-                "out vec3 fragWorldPos;"  // new
-                ""
-                "void main()"
-                "{"
-                "   vertexColor = aColor;"
-                "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
-                "   fragWorldPos = worldPos.xyz;"
-                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
-                "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
-                "   vertexUV = aUV;"
-                "}";
-}
-
-const char* getTexturedFragmentShaderSource()
-{
-    return
-                "#version 330 core\n"
-                "in vec3 vertexColor;"
-                "in vec2 vertexUV;"
-                "uniform sampler2D textureSampler;"
-                "in vec3 fragWorldPos;"  // passed from vertex shader
-                ""
-                "uniform vec4 overrideColor;"
-                "uniform bool useOverride;"
-                "uniform vec3 emitterPos[2];"        // array of emitter positions
-                "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
-                "uniform int numEmitters;"          // number of active emitters
-                ""
-                ""
-                "out vec4 FragColor;"
-                "void main()"
-                "{"
-                "   vec4 textureColor = texture(textureSampler, vertexUV);"
-                "   vec4 baseColor = useOverride ? overrideColor : textureColor;"
-                ""
-                "   float totalAmbient = 0.0;"
-                "    for (int i = 0; i < numEmitters; ++i) {"
-                "       float distance = length(emitterPos[i] - fragWorldPos);"
-                "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
-                "       totalAmbient += intensity;"
-                "   }"
-                ""
-                "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
-                "   vec4 litColor = baseColor * totalAmbient;"
-                ""
-                "   FragColor = litColor;" //* vec4(vertexColor.r, vertexColor.g, vertexColor.b, 1.0f);"
-                "}";
-}
-
-
-
-
-int compileAndLinkShaders(const char* vertexShaderSource, const char* fragmentShaderSource)
-{
-    // compile and link shader program
-    // return shader program id
-    // ------------------------------------
-
-    // vertex shader
-    int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    
-    // check for shader compile errors
-    int success;
-    char infoLog[512];
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cerr << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    
-    // fragment shader
-    int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    
-    // check for shader compile errors
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success)
-    {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cerr << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-    
-    // link shaders
-    int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    
-    // check for linking errors
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-    
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    return shaderProgram;
-}
 
 int createTexturedCubeVertexArrayObject()
 {
@@ -523,10 +344,22 @@ int main(int argc, char*argv[])
 
     // Black background
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    //Imported shader compile and linking from tut06
+    std::string shaderPathPrefix = "Shaders/";
+
+    GLuint shaderScene = loadSHADER(shaderPathPrefix + "scene_vertex.glsl",
+                                  shaderPathPrefix + "scene_frag.glsl");
     
-    // Compile and link shaders here ...
-    int shaderProgram = compileAndLinkShaders(getVertexShaderSource(), getFragmentShaderSource());
-    int texturedShaderProgram = compileAndLinkShaders(getTexturedVertexShaderSource(), getTexturedFragmentShaderSource());
+    GLuint shaderShadow = loadSHADER(shaderPathPrefix + "shadow_vertex.glsl",
+                                   shaderPathPrefix + "shadow_fragment.glsl");
+
+    GLuint textureScene = loadSHADER(shaderPathPrefix + "texture_vertex.glsl",
+                                   shaderPathPrefix + "texture_frag.glsl");
+
+    // // Compile and link shaders here ...
+    // int shaderProgram = compileAndLinkShaders(getVertexShaderSource(), getFragmentShaderSource());
+    // int texturedShaderProgram = compileAndLinkShaders(getTexturedVertexShaderSource(), getTexturedFragmentShaderSource());
 
     string suzannePath = "Models/suzanne.obj";
     string tablePath = "Models/table.obj";
@@ -565,11 +398,11 @@ int main(int argc, char*argv[])
                              cameraUp ); // up
     
     // Set View and Projection matrices on both shaders
-    setViewMatrix(shaderProgram, viewMatrix);
-    setViewMatrix(texturedShaderProgram, viewMatrix);
+    setViewMatrix(shaderScene, viewMatrix);
+    setViewMatrix(textureScene, viewMatrix);
 
-    setProjectionMatrix(shaderProgram, projectionMatrix);
-    setProjectionMatrix(texturedShaderProgram, projectionMatrix);
+    setProjectionMatrix(shaderScene, projectionMatrix);
+    setProjectionMatrix(textureScene, projectionMatrix);
 
     
     
@@ -604,13 +437,13 @@ int main(int argc, char*argv[])
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Use shaderProgram to draw the cubes
-        glUseProgram(shaderProgram);
+        // Use shaderScene to draw the cubes
+        glUseProgram(shaderScene);
         
         // Draw geometry
         glBindVertexArray(vao);
 
-        GLuint worldMatrixLocation = glGetUniformLocation(shaderProgram, "worldMatrix");
+        GLuint worldMatrixLocation = glGetUniformLocation(shaderScene, "worldMatrix");
 
         // Time-based animation value
         float time = glfwGetTime();
@@ -618,29 +451,29 @@ int main(int argc, char*argv[])
         float offset2 = cos(time) * 5.0f;
 
         // Uniform locations
-        GLuint useOverrideLoc = glGetUniformLocation(shaderProgram, "useOverride");
-        GLuint overrideColorLoc = glGetUniformLocation(shaderProgram, "overrideColor");
+        GLuint useOverrideLoc = glGetUniformLocation(shaderScene, "useOverride");
+        GLuint overrideColorLoc = glGetUniformLocation(shaderScene, "overrideColor");
 
         // First cube (static center)
         glUniform1i(useOverrideLoc, GL_FALSE);
         mat4 cubeCenter = glm::mat4(1.0f);
-        setWorldMatrix(shaderProgram,cubeCenter);
+        setWorldMatrix(shaderScene,cubeCenter);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Second cube (light)
-        glUniform1i(glGetUniformLocation(shaderProgram, "isEmissive"), true);
-        glUniform1i(glGetUniformLocation(shaderProgram, "useOverride"), GL_TRUE);
-        glUniform3f(glGetUniformLocation(shaderProgram, "overrideColor"), 1.0f, 1.0f, 1.0f);
+        glUniform1i(glGetUniformLocation(shaderScene, "isEmissive"), true);
+        glUniform1i(glGetUniformLocation(shaderScene, "useOverride"), GL_TRUE);
+        glUniform3f(glGetUniformLocation(shaderScene, "overrideColor"), 1.0f, 1.0f, 1.0f);
         glUniform1i(useOverrideLoc, GL_TRUE);
         glUniform3f(overrideColorLoc, 1.0f, 1.0f, 1.0f);
 
         mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
-        setWorldMatrix(shaderProgram,cubeTop);
+        setWorldMatrix(shaderScene,cubeTop);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Third cube (light)
         mat4 cubeRight = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f - offset, 0.0f - offset2, 0.0f - offset));
-        setWorldMatrix(shaderProgram,cubeRight);
+        setWorldMatrix(shaderScene,cubeRight);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Set light emitter positions **after** cube matrices are created
@@ -656,25 +489,25 @@ int main(int argc, char*argv[])
             translate(mat4(1.0f), vec3(1.0f, 2.3f, 1.2f)) * 
             rotate(mat4(1.0f), radians(65.0f), vec3(0.0f, 1.0f, 0.0f)) *
             scale(mat4(1.0f), vec3(1.0f, 1.0f, 1.0f));
-        setWorldMatrix(shaderProgram, cubeWorldMatrix);
+        setWorldMatrix(shaderScene, cubeWorldMatrix);
         glDrawArrays(GL_TRIANGLES, 0, 36); // 36 vertices, starting at index 0  
         
         // Send emitter data to shader
-        glUniform1i(glGetUniformLocation(shaderProgram, "numEmitters"), 2);
-        glUniform3fv(glGetUniformLocation(shaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
-        glUniform1fv(glGetUniformLocation(shaderProgram, "ambientStrength"), 2, emitterStrengths);
+        glUniform1i(glGetUniformLocation(shaderScene, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(shaderScene, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(shaderScene, "ambientStrength"), 2, emitterStrengths);
 
         // Switch to the textured shader program to draw the more sophisticated meshes that have textures
-        glUseProgram(texturedShaderProgram);
+        glUseProgram(textureScene);
         glActiveTexture(GL_TEXTURE0);
-        glUniform1i(glGetUniformLocation(texturedShaderProgram, "textureSampler"), 0);
+        glUniform1i(glGetUniformLocation(textureScene, "textureSampler"), 0);
         
         // Draw Table
         glBindTexture(GL_TEXTURE_2D, tableTexID);
         mat4 tableWorldMatrix = 
             translate(mat4(1.0f), vec3(0.0f, -0.5f, 0.0f)) * 
             scale(mat4(1.0f), vec3(2.5f, 2.5f, 2.5f));
-        setWorldMatrix(texturedShaderProgram, tableWorldMatrix);
+        setWorldMatrix(textureScene, tableWorldMatrix);
         glBindVertexArray(tableVAO);
         glDrawArrays(GL_TRIANGLES, 0, tableVertices);
         
@@ -687,13 +520,13 @@ int main(int argc, char*argv[])
             translate(mat4(1.0f), vec3(0.0f, 1.3f, 0.0f)) *
             rotate(mat4(1.0f), radians(spinningObjAngle), vec3(0.0f, 1.0f, 0.0f)) *
             scale(mat4(1.0f), vec3(0.7f, 0.7f, 0.7f));
-        setWorldMatrix(texturedShaderProgram, suzanneWorldMatrix);
+        setWorldMatrix(textureScene, suzanneWorldMatrix);
         glBindVertexArray(suzanneVAO);
         glDrawArrays(GL_TRIANGLES, 0, suzanneVertices);
 
-        glUniform1i(glGetUniformLocation(texturedShaderProgram, "numEmitters"), 2);
-        glUniform3fv(glGetUniformLocation(texturedShaderProgram, "emitterPos"), 2, &emitterPositions[0].x);
-        glUniform1fv(glGetUniformLocation(texturedShaderProgram, "ambientStrength"), 2, emitterStrengths);
+        glUniform1i(glGetUniformLocation(textureScene, "numEmitters"), 2);
+        glUniform3fv(glGetUniformLocation(textureScene, "emitterPos"), 2, &emitterPositions[0].x);
+        glUniform1fv(glGetUniformLocation(textureScene, "ambientStrength"), 2, emitterStrengths);
         glBindVertexArray(0);
 
         // End Frame
@@ -797,8 +630,8 @@ int main(int argc, char*argv[])
             viewMatrix = lookAt(position, position + cameraLookAt, cameraUp);
         }
 
-        setViewMatrix(shaderProgram, viewMatrix);
-        setViewMatrix(texturedShaderProgram, viewMatrix);
+        setViewMatrix(shaderScene, viewMatrix);
+        setViewMatrix(textureScene, viewMatrix);
 
 
     }
