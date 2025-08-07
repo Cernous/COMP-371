@@ -226,64 +226,7 @@ const char* getTexturedFragmentShaderSource()
                 "}";
 }
 
-const char* getNormalVertexShaderSource()
-{
-    // For now, you use a string for your shader code, in the assignment, shaders will be stored in .glsl files
-    return
-                "#version 330 core\n"
-                "layout (location = 0) in vec3 aPos;"
-                "layout (location = 1) in vec3 aNormal;"
-				""
-                "out vec3 vertexNormal;"
-                "out vec3 fragWorldPos;"  // new
-				""
-                "uniform mat4 worldMatrix;"
-                "uniform mat4 viewMatrix = mat4(1.0);"  // default value for view matrix (identity)
-                "uniform mat4 projectionMatrix = mat4(1.0);"
-                ""
-                "void main()"
-                "{"
-                "   " 	
-                "   vertexNormal = aNormal;"
-                "   vec4 worldPos = worldMatrix * vec4(aPos, 1.0);"
-                "   fragWorldPos = worldPos.xyz;"
-                "   mat4 modelViewProjection = projectionMatrix * viewMatrix * worldMatrix;"
-                "   gl_Position = modelViewProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);"
-                "}";
-}
 
-const char* getNormalFragmentShaderSource()
-{
-    return
-                "#version 330 core\n"
-				"in vec3 vertexNormal;"
-				"out vec4 FragColor;"
-                "in vec3 fragWorldPos;"  // passed from vertex shader
-                ""
-                "uniform vec4 overrideColor;"
-                "uniform bool useOverride;"
-                "uniform vec3 emitterPos[2];"        // array of emitter positions
-                "uniform float ambientStrength[2];"   // array of strengths (optional for varying intensity)
-                "uniform int numEmitters;"          // number of active emitters
-                ""
-                ""
-				"void main()"
-                "{"
-                "   vec4 baseColor = useOverride ? overrideColor : vec4(0.5f*vertexNormal+vec3(0.5f), 1.0f);"
-                ""
-                "   float totalAmbient = 0.0;"
-                "    for (int i = 0; i < numEmitters; ++i) {"
-                "       float distance = length(emitterPos[i] - fragWorldPos);"
-                "       float intensity = ambientStrength[i] / (distance * distance);"  // inverse square falloff
-                "       totalAmbient += intensity;"
-                "   }"
-                ""
-                "   totalAmbient = clamp(totalAmbient, 0.0, 1.0);" // clamp brightness
-                "   vec4 litColor = baseColor * totalAmbient;"
-                ""
-                "   FragColor = litColor;"
-                "}";
-}
 
 
 int compileAndLinkShaders(const char* vertexShaderSource, const char* fragmentShaderSource)
@@ -584,7 +527,6 @@ int main(int argc, char*argv[])
     // Compile and link shaders here ...
     int shaderProgram = compileAndLinkShaders(getVertexShaderSource(), getFragmentShaderSource());
     int texturedShaderProgram = compileAndLinkShaders(getTexturedVertexShaderSource(), getTexturedFragmentShaderSource());
-    int normalShaderProgram = compileAndLinkShaders(getNormalVertexShaderSource(), getNormalFragmentShaderSource());
 
     string suzannePath = "Models/suzanne.obj";
     string tablePath = "Models/table.obj";
@@ -625,11 +567,10 @@ int main(int argc, char*argv[])
     // Set View and Projection matrices on both shaders
     setViewMatrix(shaderProgram, viewMatrix);
     setViewMatrix(texturedShaderProgram, viewMatrix);
-    setViewMatrix(normalShaderProgram, viewMatrix); //normal shader seems to be broken but it is added here in case i want to use it
 
     setProjectionMatrix(shaderProgram, projectionMatrix);
     setProjectionMatrix(texturedShaderProgram, projectionMatrix);
-    setProjectionMatrix(normalShaderProgram, projectionMatrix);
+
     
     
     // Define and upload geometry to the GPU here ...
