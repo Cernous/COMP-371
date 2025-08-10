@@ -1,5 +1,5 @@
 //
-// COMP 371 Labs Assignment 1
+// COMP 371 Labs Assignment 2
 //
 
 #include <iostream>
@@ -31,7 +31,7 @@ const GLuint SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
 using namespace std;
 
 // Macros
-#define CAMERASENSITIVITY 1.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
+#define CAMERASENSITIVITY 500.0f                  // @NOTE: ON WAYLAND - Do AngularSpeed to 500.0f, 1.0f is for WSL
 
 GLuint loadTexture(const char *filename);
 
@@ -351,7 +351,7 @@ int main(int argc, char*argv[])
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
     //Imported shader compile and linking from tut06
-    std::string shaderPathPrefix = "Shaders2/";
+    std::string shaderPathPrefix = "Shaders/";
 
     GLuint shaderScene = loadSHADER(shaderPathPrefix + "scene_vertex.phong.glsl",
                                   shaderPathPrefix + "scene_frag.phong.glsl");
