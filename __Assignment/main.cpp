@@ -462,6 +462,7 @@ int main(int argc, char*argv[])
 
     float carSpeed = 0.0f;
     float carWheelAngle = 0.0f;
+    float carSteerAngle = 0.0f;
     
     // Entering Main Loop
     while(!glfwWindowShouldClose(window))
@@ -562,7 +563,7 @@ int main(int argc, char*argv[])
 
         // Car
         glBindTexture(GL_TEXTURE_2D, CarTexIDs);
-        spinningObjAngle += 45.0f * dt;
+        spinningObjAngle += 10.0f * dt;
 
         mat4 mainBodyTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.3f, 0.0f));
         mat4 mainBodyRotate = glm::rotate(glm::mat4(1.0f), glm::radians(spinningObjAngle), glm::vec3(0.0f, 1.0f, 0.0f));
@@ -584,50 +585,50 @@ int main(int argc, char*argv[])
         glDrawArrays(GL_TRIANGLES, 0, carMirrorVertices);
 
         // wheels
-        setShadowWorld(mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 1.22f)) * 
+        mat4 wheelTempMatrix = mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.2f, 0.60f)) * 
+            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f));
+        setShadowWorld(
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        setWorldMatrix(textureScene, 
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        glBindVertexArray(carWheelsVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
+
+        wheelTempMatrix = mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.5f, 0.2f, -0.6f)) * 
             glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+            glm::rotate(glm::mat4(1.0f), glm::radians(carSteerAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        setShadowWorld(
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
         );
-        setWorldMatrix(textureScene, mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 1.22f)) * 
-            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
-        );
-        glBindVertexArray(carWheelsVAO);
-        glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
-
-        setShadowWorld(mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.0f)) * 
-            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) * 
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
-        );
-        setWorldMatrix(textureScene, mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.0f)) * 
-            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) * 
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        setWorldMatrix(textureScene, 
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
         );
         glBindVertexArray(carWheelsVAO);
         glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
 
-        setShadowWorld(mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 0.0f)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        wheelTempMatrix = mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, 0.2f, -0.6f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(carSteerAngle), glm::vec3(0.0f, -1.0f, 0.0f));
+        setShadowWorld(
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
         );
-        setWorldMatrix(textureScene, mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 0.0f)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        setWorldMatrix(textureScene, 
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
         );
         glBindVertexArray(carWheelsVAO);
         glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
 
-        setShadowWorld(mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 1.22f)) *
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        wheelTempMatrix = mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(-0.5f, 0.2f, 0.6f));
+        setShadowWorld(
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
         );
-        setWorldMatrix(textureScene, mainBodyMatrix * 
-            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 1.22f)) * 
-            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        setWorldMatrix(textureScene, 
+            glm::rotate(wheelTempMatrix, glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
         );
         glBindVertexArray(carWheelsVAO);
         glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
@@ -684,27 +685,30 @@ int main(int argc, char*argv[])
         cameraLookAt = vec3(cosf(phi)*cosf(theta), sinf(phi), -cosf(phi)*sinf(theta));
         vec3 cameraSideVector = glm::cross(cameraLookAt, vec3(0.0f, 1.0f, 0.0f));
         float carAccel = 0.0f;
+        carSteerAngle = 0.0f;
         glm::normalize(cameraSideVector);
         if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS)
         {
             // cameraPosition += cameraLookAt * dt * currentCameraSpeed;
-            carAccel = 1.0f;
+            carAccel = 20.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS)
         {
             // cameraPosition -= cameraLookAt * dt * currentCameraSpeed;
-            carAccel = -1.0f;
+            carAccel = -20.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS)
         {
             // cameraPosition += cameraSideVector * dt * currentCameraSpeed;
+            carSteerAngle = 25.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS)
         {
             // cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
+            carSteerAngle = 335.0f;
         }
 
         // Adding Spacebar for up
@@ -718,11 +722,12 @@ int main(int argc, char*argv[])
             // cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
 
-        carSpeed = carAccel != 0.0f ? carSpeed + carAccel: carSpeed;
-        if(carSpeed > 0.0f && carAccel == 0.0f) carSpeed -= 0.5f;
-        else if(carSpeed < 0.0f && carAccel == 0.0f) carSpeed += 0.0f;
-        // carWheelAngle = carSpeed * 0.02f; // --- NOTE: Not working
-      
+        carSpeed = carAccel != 0.0f && carSpeed < 200 && carSpeed > -200 ? carSpeed + carAccel: carSpeed;
+        if(carSpeed > 0.0f && carAccel == 0.0f) carSpeed -= 0.1f;
+        else if(carSpeed < 0.0f && carAccel == 0.0f) carSpeed += 0.1f;
+        carWheelAngle = -carSpeed * (40 * dt) * 360; // --- NOTE: Not working
+        
+        printf("Angle: %f\n", carWheelAngle);
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
