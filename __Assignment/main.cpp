@@ -392,19 +392,22 @@ int main(int argc, char*argv[])
     // int shaderProgram = compileAndLinkShaders(getVertexShaderSource(), getFragmentShaderSource());
     // int texturedShaderProgram = compileAndLinkShaders(getTexturedVertexShaderSource(), getTexturedFragmentShaderSource());
 
-    string suzannePath = "Models/suzanne.obj";
-    string tablePath = "Models/table.obj";
+    string carBodyPath = "Models/Truck_Body.obj";
+    string carMirrorPath = "Models/Truck_Mirror.obj";
+    string carWheelPath = "Models/Truck_Wheel.obj";
 
-    GLuint suzanneTexID = loadTexture("Textures/Suzanne_Tex.png");
-    GLuint tableTexID = loadTexture("Textures/Table_Tex.png");
+    GLuint CarTexIDs = loadTexture("Textures/truck.png");
 
     // Why not use EBO? I was too lazy to see if it worked with textures
 
-    int suzanneVertices;
-    GLuint suzanneVAO = setupModelVBO(suzannePath, suzanneVertices);
+    int carBodyVertices;
+    GLuint carBodyVAO = setupModelVBO(carBodyPath, carBodyVertices);
 
-    int tableVertices;
-    GLuint tableVAO = setupModelVBO(tablePath, tableVertices);
+    int carMirrorVertices;
+    GLuint carMirrorVAO = setupModelVBO(carMirrorPath, carMirrorVertices);
+
+    int carWheelsVertices;
+    GLuint carWheelsVAO = setupModelVBO(carWheelPath, carWheelsVertices);
     
     // Camera parameters for view transform
     vec3 cameraPosition(0.6f,2.0f,10.0f);
@@ -456,6 +459,9 @@ int main(int argc, char*argv[])
     glEnable(GL_DEPTH_TEST);
 
     float spinningObjAngle = 0.0f;
+
+    float carSpeed = 0.0f;
+    float carWheelAngle = 0.0f;
     
     // Entering Main Loop
     while(!glfwWindowShouldClose(window))
@@ -466,8 +472,8 @@ int main(int argc, char*argv[])
 
         // Time-based animation value
         float time = glfwGetTime();
-        float offset = sin(time) * 5.5f;
-        float offset2 = cos(time) * 5.0f;
+        float offset = sin(time*0.5) * 5.5f;
+        float offset2 = cos(time*0.5) * 5.0f;
 
         // Compute animated light cubes first to get light positions
         mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
@@ -507,15 +513,6 @@ int main(int argc, char*argv[])
         setShadowWorld(cubeRight);
         glDrawArrays(GL_TRIANGLES, 0, 36);
         // Textured meshes
-        setShadowWorld(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(2.5f)));
-        glBindVertexArray(tableVAO);
-        glDrawArrays(GL_TRIANGLES, 0, tableVertices);
-
-        setShadowWorld(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.3f, 0.0f)) *
-                       glm::rotate(glm::mat4(1.0f), glm::radians(spinningObjAngle), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                       glm::scale(glm::mat4(1.0f), glm::vec3(0.7f)));
-        glBindVertexArray(suzanneVAO);
-        glDrawArrays(GL_TRIANGLES, 0, suzanneVertices);
         glBindVertexArray(0);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -542,11 +539,6 @@ int main(int argc, char*argv[])
         // Draw geometry
         glBindVertexArray(vao);
 
-        // Center cube (static)
-        glUniform1i(glGetUniformLocation(shaderScene, "useOverride"), GL_FALSE);
-        setWorldMatrix(shaderScene, glm::mat4(1.0f));
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
         // Light cubes (draw emissive-looking white)
         glUniform1i(glGetUniformLocation(shaderScene, "useOverride"), GL_TRUE);
         glUniform3f(glGetUniformLocation(shaderScene, "overrideColor"), 1.0f, 1.0f, 1.0f);
@@ -554,14 +546,6 @@ int main(int argc, char*argv[])
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         setWorldMatrix(shaderScene, cubeRight);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        // A separate colored cube
-        glUniform1i(glGetUniformLocation(shaderScene, "useOverride"), GL_FALSE);
-        setWorldMatrix(shaderScene,
-            translate(mat4(1.0f), vec3(1.0f, 2.3f, 1.2f)) *
-            rotate(mat4(1.0f), radians(65.0f), vec3(0.0f, 1.0f, 0.0f)) *
-            scale(mat4(1.0f), vec3(1.0f)));
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
@@ -576,20 +560,79 @@ int main(int argc, char*argv[])
         glUniform1i(glGetUniformLocation(textureScene, "numEmitters"), 2);
         glUniform3f(glGetUniformLocation(textureScene, "viewPos"), cameraPosition.x, cameraPosition.y, cameraPosition.z);
 
-        // Table
-        glBindTexture(GL_TEXTURE_2D, tableTexID);
-        setWorldMatrix(textureScene, glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.5f, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(2.5f)));
-        glBindVertexArray(tableVAO);
-        glDrawArrays(GL_TRIANGLES, 0, tableVertices);
-
-        // Suzanne
+        // Car
+        glBindTexture(GL_TEXTURE_2D, CarTexIDs);
         spinningObjAngle += 45.0f * dt;
-        glBindTexture(GL_TEXTURE_2D, suzanneTexID);
-        setWorldMatrix(textureScene, glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.3f, 0.0f)) *
-                                      glm::rotate(glm::mat4(1.0f), glm::radians(spinningObjAngle), glm::vec3(0.0f, 1.0f, 0.0f)) *
-                                      glm::scale(glm::mat4(1.0f), glm::vec3(0.7f)));
-        glBindVertexArray(suzanneVAO);
-        glDrawArrays(GL_TRIANGLES, 0, suzanneVertices);
+
+        mat4 mainBodyTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.3f, 0.0f));
+        mat4 mainBodyRotate = glm::rotate(glm::mat4(1.0f), glm::radians(spinningObjAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+        mat4 mainBodyScale = glm::scale(glm::mat4(1.0f), glm::vec3(1.5f));
+        mat4 mainBodyMatrix =  mainBodyTransform * mainBodyScale * mainBodyRotate;
+
+        // left mirror and mainbody
+        setShadowWorld(mainBodyMatrix);
+        setWorldMatrix(textureScene, mainBodyMatrix);
+        glBindVertexArray(carBodyVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carBodyVertices);
+        glBindVertexArray(carMirrorVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carMirrorVertices);
+
+        // right mirror
+        setShadowWorld(mainBodyTransform * mainBodyRotate * glm::scale(glm::mat4(1.0f), glm::vec3(-1.5f, 1.5f, 1.5f)));
+        setWorldMatrix(textureScene, mainBodyTransform * mainBodyRotate * glm::scale(glm::mat4(1.0f), glm::vec3(-1.5f, 1.5f, 1.5f)));
+        glBindVertexArray(carMirrorVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carMirrorVertices);
+
+        // wheels
+        setShadowWorld(mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 1.22f)) * 
+            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        setWorldMatrix(textureScene, mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 1.22f)) * 
+            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        glBindVertexArray(carWheelsVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
+
+        setShadowWorld(mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.0f)) * 
+            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) * 
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        setWorldMatrix(textureScene, mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.05f, 0.05f, 0.0f)) * 
+            glm::scale(glm::mat4(1.0f), glm::vec3(-1.0f, 1.0f, 1.0f)) * 
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        glBindVertexArray(carWheelsVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
+
+        setShadowWorld(mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 0.0f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        setWorldMatrix(textureScene, mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 0.0f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        glBindVertexArray(carWheelsVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
+
+        setShadowWorld(mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 1.22f)) *
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        setWorldMatrix(textureScene, mainBodyMatrix * 
+            glm::translate(glm::mat4(1.0f), glm::vec3(-0.05f, 0.05f, 1.22f)) * 
+            glm::rotate(glm::mat4(1.0f), glm::radians(carWheelAngle), glm::vec3(1.0f, 0.0f, 0.0f))
+        );
+        glBindVertexArray(carWheelsVAO);
+        glDrawArrays(GL_TRIANGLES, 0, carWheelsVertices);
+
+
         glBindVertexArray(0);
 
         // End Frame
@@ -640,38 +683,45 @@ int main(int argc, char*argv[])
 
         cameraLookAt = vec3(cosf(phi)*cosf(theta), sinf(phi), -cosf(phi)*sinf(theta));
         vec3 cameraSideVector = glm::cross(cameraLookAt, vec3(0.0f, 1.0f, 0.0f));
-
+        float carAccel = 0.0f;
         glm::normalize(cameraSideVector);
         if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS)
         {
-            cameraPosition += cameraLookAt * dt * currentCameraSpeed;
+            // cameraPosition += cameraLookAt * dt * currentCameraSpeed;
+            carAccel = 1.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS)
         {
-            cameraPosition -= cameraLookAt * dt * currentCameraSpeed;
+            // cameraPosition -= cameraLookAt * dt * currentCameraSpeed;
+            carAccel = -1.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS)
         {
-            cameraPosition += cameraSideVector * dt * currentCameraSpeed;
+            // cameraPosition += cameraSideVector * dt * currentCameraSpeed;
         }
         
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS)
         {
-            cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
+            // cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
         }
 
         // Adding Spacebar for up
          if (glfwGetKey(window, GLFW_KEY_SPACE ) == GLFW_PRESS)
         {
-            cameraPosition += vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
+            // cameraPosition += vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
         // adding anchor for down
          if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL ) == GLFW_PRESS)
         {
-            cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
+            // cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
+
+        carSpeed = carAccel != 0.0f ? carSpeed + carAccel: carSpeed;
+        if(carSpeed > 0.0f && carAccel == 0.0f) carSpeed -= 0.5f;
+        else if(carSpeed < 0.0f && carAccel == 0.0f) carSpeed += 0.0f;
+        // carWheelAngle = carSpeed * 0.02f; // --- NOTE: Not working
       
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
