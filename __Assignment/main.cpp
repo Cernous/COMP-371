@@ -362,6 +362,9 @@ int main(int argc, char*argv[])
     GLuint textureScene = loadSHADER(shaderPathPrefix + "texture_vertex.phong.glsl",
                                    shaderPathPrefix + "texture_frag.phong.glsl");
 
+    GLuint sceneWOPhongShader = loadSHADER(shaderPathPrefix + "scene_vertex.glsl",
+                                        shaderPathPrefix + "scene_frag.glsl");
+
     // [ADDED] Create depth map FBO/texture for shadow mapping
     glGenFramebuffers(1, &depthMapFBO);
     glGenTextures(1, &depthMapTex);
@@ -395,8 +398,10 @@ int main(int argc, char*argv[])
     string carBodyPath = "Models/Truck_Body.obj";
     string carMirrorPath = "Models/Truck_Mirror.obj";
     string carWheelPath = "Models/Truck_Wheel.obj";
+    string skyBoxPath = "Models/SkyBoxCube.obj";
 
     GLuint CarTexIDs = loadTexture("Textures/truck.png", GL_NEAREST);
+    GLuint CubeMapID = loadTexture("Textures/FSNight_02CubeMap.png", GL_NEAREST);
 
     // Why not use EBO? I was too lazy to see if it worked with textures
 
@@ -408,6 +413,9 @@ int main(int argc, char*argv[])
 
     int carWheelsVertices;
     GLuint carWheelsVAO = setupModelVBO(carWheelPath, carWheelsVertices);
+
+    int skyBoxVertices;
+    GLuint skyBoxVAO = setupModelVBO(skyBoxPath, skyBoxVertices);
     
     // Camera parameters for view transform
     vec3 cameraPosition(0.6f,2.0f,10.0f);
@@ -434,10 +442,11 @@ int main(int argc, char*argv[])
     // Set View and Projection matrices on both shaders
     setViewMatrix(shaderScene, viewMatrix);
     setViewMatrix(textureScene, viewMatrix);
+    setViewMatrix(sceneWOPhongShader, viewMatrix);
 
     setProjectionMatrix(shaderScene, projectionMatrix);
     setProjectionMatrix(textureScene, projectionMatrix);
-
+    setProjectionMatrix(sceneWOPhongShader, projectionMatrix);
     
     
     // Define and upload geometry to the GPU here ...
@@ -548,6 +557,15 @@ int main(int argc, char*argv[])
 
         // setWorldMatrix(shaderScene, cubeRight);
         // glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+        
+        // Skybox
+        glUseProgram(sceneWOPhongShader);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, CubeMapID);
+        setWorldMatrix(sceneWOPhongShader, glm::scale(glm::mat4(1.0f), glm::vec3(25.0f)));
+        glBindVertexArray(skyBoxVAO);
+        glDrawArrays(GL_TRIANGLES, 0, skyBoxVertices);
         glBindVertexArray(0);
 
         // Textured pass
@@ -690,13 +708,13 @@ int main(int argc, char*argv[])
         if (glfwGetKey(window, GLFW_KEY_W ) == GLFW_PRESS)
         {
             // cameraPosition += cameraLookAt * dt * currentCameraSpeed;
-            carAccel = 20.0f;
+            carAccel = 1.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_S ) == GLFW_PRESS)
         {
             // cameraPosition -= cameraLookAt * dt * currentCameraSpeed;
-            carAccel = -20.0f;
+            carAccel = -1.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS)
@@ -722,10 +740,13 @@ int main(int argc, char*argv[])
             // cameraPosition -= vec3(0.0f,1.0f,0.0f)*dt*currentCameraSpeed;
         }
 
-        carSpeed = carAccel != 0.0f && carSpeed < 200 && carSpeed > -200 ? carSpeed + carAccel: carSpeed;
+        carSpeed = carAccel != 0.0f && carSpeed < 30 && carSpeed > -30 ? carSpeed + carAccel: carSpeed;
         if(carSpeed > 0.0f && carAccel == 0.0f) carSpeed -= 0.1f;
         else if(carSpeed < 0.0f && carAccel == 0.0f) carSpeed += 0.1f;
-        carWheelAngle = -carSpeed * (40 * dt) * 360; // --- NOTE: Not working
+        if(carSpeed > 0.5 || carSpeed < -0.5) {
+            carWheelAngle += carSpeed * dt * -10; // --- NOTE: Not working
+            carWheelAngle = carWheelAngle - 360 * int(carWheelAngle / 360.0);
+        }
         
         printf("Angle: %f\n", carWheelAngle);
         // Set the view matrix for first and third person cameras
@@ -751,6 +772,7 @@ int main(int argc, char*argv[])
 
         setViewMatrix(shaderScene, viewMatrix);
         setViewMatrix(textureScene, viewMatrix);
+        setViewMatrix(sceneWOPhongShader, viewMatrix);
 
 
     }
