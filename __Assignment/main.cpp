@@ -173,7 +173,7 @@ void setWorldMatrix(int shaderProgram, mat4 worldMatrix)
 	glUniformMatrix4fv(worldMatrixLocation, 1, GL_FALSE, &worldMatrix[0][0]);
 }
 
-GLuint loadTexture(const char *filename)
+GLuint loadTexture(const char *filename, GLint filterMethod)
 {
     int width, height, nrChannels;
     unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, 0);
@@ -188,8 +188,8 @@ GLuint loadTexture(const char *filename)
 
     glBindTexture(GL_TEXTURE_2D, textureId);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filterMethod);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filterMethod);
 
     GLenum format=0;
     switch(nrChannels){
@@ -396,7 +396,7 @@ int main(int argc, char*argv[])
     string carMirrorPath = "Models/Truck_Mirror.obj";
     string carWheelPath = "Models/Truck_Wheel.obj";
 
-    GLuint CarTexIDs = loadTexture("Textures/truck.png");
+    GLuint CarTexIDs = loadTexture("Textures/truck.png", GL_NEAREST);
 
     // Why not use EBO? I was too lazy to see if it worked with textures
 
@@ -473,8 +473,8 @@ int main(int argc, char*argv[])
 
         // Time-based animation value
         float time = glfwGetTime();
-        float offset = sin(time*0.5) * 5.5f;
-        float offset2 = cos(time*0.5) * 5.0f;
+        float offset = sin(time*0.1) * 5.5f;
+        float offset2 = cos(time*0.1) * 5.0f;
 
         // Compute animated light cubes first to get light positions
         mat4 cubeTop = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f + offset, 0.0f, 0.0f + offset2));
@@ -543,11 +543,11 @@ int main(int argc, char*argv[])
         // Light cubes (draw emissive-looking white)
         glUniform1i(glGetUniformLocation(shaderScene, "useOverride"), GL_TRUE);
         glUniform3f(glGetUniformLocation(shaderScene, "overrideColor"), 1.0f, 1.0f, 1.0f);
-        setWorldMatrix(shaderScene, cubeTop);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        // setWorldMatrix(shaderScene, cubeTop);
+        // glDrawArrays(GL_TRIANGLES, 0, 36);
 
-        setWorldMatrix(shaderScene, cubeRight);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        // setWorldMatrix(shaderScene, cubeRight);
+        // glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
 
         // Textured pass
@@ -565,7 +565,7 @@ int main(int argc, char*argv[])
         glBindTexture(GL_TEXTURE_2D, CarTexIDs);
         spinningObjAngle += 10.0f * dt;
 
-        mat4 mainBodyTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.3f, 0.0f));
+        mat4 mainBodyTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         mat4 mainBodyRotate = glm::rotate(glm::mat4(1.0f), glm::radians(spinningObjAngle), glm::vec3(0.0f, 1.0f, 0.0f));
         mat4 mainBodyScale = glm::scale(glm::mat4(1.0f), glm::vec3(1.5f));
         mat4 mainBodyMatrix =  mainBodyTransform * mainBodyScale * mainBodyRotate;
@@ -702,13 +702,13 @@ int main(int argc, char*argv[])
         if (glfwGetKey(window, GLFW_KEY_D ) == GLFW_PRESS)
         {
             // cameraPosition += cameraSideVector * dt * currentCameraSpeed;
-            carSteerAngle = 25.0f;
+            carSteerAngle = 15.0f;
         }
         
         if (glfwGetKey(window, GLFW_KEY_A ) == GLFW_PRESS)
         {
             // cameraPosition -= cameraSideVector * dt * currentCameraSpeed;
-            carSteerAngle = 335.0f;
+            carSteerAngle = 345.0f;
         }
 
         // Adding Spacebar for up
