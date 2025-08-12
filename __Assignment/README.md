@@ -5,40 +5,39 @@
 
 ## Objective
 
-Create a scene with custom assets or differently arranged assets (must be different from the tutorials) and use moving lights.
+Alongside with all the requirements of the first assignment, create a scene that includes:
+- User input that interacts with the objects in the application 
+- Phong shading or better
 
 ## High-Level Description (In point form)
 
-- Adds 2 extra custom meshes (Loaded through OBJloader/OBJloaderV2 from tutorial 5)
-    - Meshes are made and exported from Blender
-        - Suzanne is a prefab that comes with blender
-        - Table is a custom made mesh that is poorly optimized
-            - Applied a subdivider and then triangulate modifier which skyrocketed the vertex count
-    - Meshes have custom textures (Loaded through `loadTexture` function from tutorial 4)
-- Arrange 4 cubes (Textured vertex array data taken from tutorial 4) in different locations
-    - 2 of which are moving *ambient lights* orbiting the scene at an offset
-    - 2 of which are static and shows off the light shader
-- Modified both the texturedShaderProgram (from tutorial 4) and the original shaderProgram (from tutorial 3) to illuminate parts of the mesh that are exposed to the emitters
+- A truck object composed of 3 different models: The body, mirror, and wheel
+    - These are loaded and meticulously placed to resemble a truck
+    - Mirror needed to be loaded twice while the wheel is loaded 4 times
+
+- Hierarchical animation model involving the truck, wheels and the ground
+    - The main body of the truck and the ground is considered as the first level
+    - The wheels are the second level as they steer and roll
+    - Yes. That means the entire scene rotates on the Y-axis and not the camera
+
+- Phong Model Shaders
+    - <!Add your part!> 
+
+- User-controlled scene comes with the relaxed camera requirements
+    - The previous camera keybinds are set to control the wheels on the car
+
+- Skybox
+    - It's a cube.
+    - Using a unlit shader as opposed to the rest of the elements in the scene
 
 ## Pitfalls
-- Unable to make the normalShaderProgram (from tutorial 5) to work properly with the emitters
-    - It was cool to look at
-- Unable to load `*.glsl` files
-    - We ended up resorting to just use function returns to make the shaders
-- Did not use EBO to load the meshes
-    - It would have been more efficient
-- Unable to cast shadows of the Suzanne Model on to the table using dynamic lighting
-    - We resorted to keeping emitters and shaderProgram as they are for now.
+- Did not have enough time to create the moving ground
+    - While it is unintuitive, we wanted to make the ground move in response to the user input.
+    - However if the ground moved, new planes would need to be loaded in the event that the car reaches the end of one plane.
 
 ## Controls
 
-- W: translates the camera forward from where it is facing 
-- S: translates the camera backwards from where it is facing 
-- A: translates the camera left of where it is facing
-- D: translates the camera right of where it is facing
-- LEFT_SHIFT: increases the camera's movement speed
-- SPACE: translates the camera up the y-axis
-- LEFT_CTRL: translates the camera down the y-axis
-
-## Conclusion
-We applied a lot of what we learned from the tutorials and some more from researching a lot about shader programs and 3D modeling. Although, there are a lot of things we could have done differently, such as using ASSIMP and maybe spend more time on figuring out why loading shader files was not working, we feel that we have accomplished the objective of this assignment, which was creating a scene that was different from what's given by the tutorials and include 2 moving lights.
+- W: Makes the wheels roll forward
+- S: Makes the wheels roll backwards
+- A: Makes the front wheels steer left
+- D: Makes the front wheels steer right
