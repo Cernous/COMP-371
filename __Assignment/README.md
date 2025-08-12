@@ -1,4 +1,4 @@
-# Assignment 1 COMP 371
+# Assignment 2 COMP 371
 
 40166293 - Clarence Zhen
 40263250 - Gorden Quach
