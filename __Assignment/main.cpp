@@ -399,9 +399,11 @@ int main(int argc, char*argv[])
     string carMirrorPath = "Models/Truck_Mirror.obj";
     string carWheelPath = "Models/Truck_Wheel.obj";
     string skyBoxPath = "Models/SkyBoxCube.obj";
+    string planePath = "Models/Plane.obj";
 
     GLuint CarTexIDs = loadTexture("Textures/truck.png", GL_NEAREST);
     GLuint CubeMapID = loadTexture("Textures/FSNight_02CubeMap.png", GL_NEAREST);
+    GLuint GroundID = loadTexture("Textures/MaterialGround.png", GL_NEAREST);
 
     // Why not use EBO? I was too lazy to see if it worked with textures
 
@@ -416,6 +418,9 @@ int main(int argc, char*argv[])
 
     int skyBoxVertices;
     GLuint skyBoxVAO = setupModelVBO(skyBoxPath, skyBoxVertices);
+
+    int groundVertices;
+    GLuint groundVAO = setupModelVBO(planePath, groundVertices);
     
     // Camera parameters for view transform
     vec3 cameraPosition(0.6f,2.0f,10.0f);
@@ -563,7 +568,7 @@ int main(int argc, char*argv[])
         glUseProgram(sceneWOPhongShader);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, CubeMapID);
-        setWorldMatrix(sceneWOPhongShader, glm::scale(glm::mat4(1.0f), glm::vec3(25.0f)));
+        setWorldMatrix(sceneWOPhongShader, glm::scale(glm::mat4(1.0f), glm::vec3(30.0f)));
         glBindVertexArray(skyBoxVAO);
         glDrawArrays(GL_TRIANGLES, 0, skyBoxVertices);
         glBindVertexArray(0);
@@ -579,10 +584,21 @@ int main(int argc, char*argv[])
         glUniform1i(glGetUniformLocation(textureScene, "numEmitters"), 2);
         glUniform3f(glGetUniformLocation(textureScene, "viewPos"), cameraPosition.x, cameraPosition.y, cameraPosition.z);
 
+        spinningObjAngle += 10.0f * dt;
+        // Ground
+        glBindTexture(GL_TEXTURE_2D, GroundID);
+        mat4 groundMatrix = glm::translate(mat4(1.0), vec3(0.0f, -0.125f, 0.0f)) *
+                            glm::scale(mat4(1.0f), vec3(40.0f, 0.0f, 40.0f)) * 
+                            glm::rotate(mat4(1.0f), radians(spinningObjAngle), vec3(0.0f, 1.0f, 0.0f));
+
+        setShadowWorld(groundMatrix);
+        setWorldMatrix(textureScene, groundMatrix);
+        glBindVertexArray(groundVAO);
+        glDrawArrays(GL_TRIANGLES, 0, groundVertices);
+
         // Car
         glBindTexture(GL_TEXTURE_2D, CarTexIDs);
-        spinningObjAngle += 10.0f * dt;
-
+        
         mat4 mainBodyTransform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, 0.0f));
         mat4 mainBodyRotate = glm::rotate(glm::mat4(1.0f), glm::radians(spinningObjAngle), glm::vec3(0.0f, 1.0f, 0.0f));
         mat4 mainBodyScale = glm::scale(glm::mat4(1.0f), glm::vec3(1.5f));
@@ -748,7 +764,7 @@ int main(int argc, char*argv[])
             carWheelAngle = carWheelAngle - 360 * int(carWheelAngle / 360.0);
         }
         
-        printf("Angle: %f\n", carWheelAngle);
+        // printf("Angle: %f\n", carWheelAngle);
         // Set the view matrix for first and third person cameras
         // - In first person, camera lookat is set like below
         // - In third person, camera position is on a sphere looking towards center
