@@ -21,7 +21,7 @@ Alongside with all the requirements of the first assignment, create a scene that
     - Yes. That means the entire scene rotates on the Y-axis and not the camera
 
 - Phong Model Shaders
-    - <!Add your part!> 
+    - Illuminates the ground and the truck while casting dynamic shadows unto the models
 
 - User-controlled scene comes with the relaxed camera requirements
     - The previous camera keybinds are set to control the wheels on the car
